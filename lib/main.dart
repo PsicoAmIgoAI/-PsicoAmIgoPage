@@ -3,13 +3,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:async'; // Necesario para TimeoutException
+import 'dart:async';
 
+// ---------------------------------------------------------------------
+// ⚠️ NOTA DE SEGURIDAD: Reemplaza los valores de acceso en tu copia ⚠️
+// ---------------------------------------------------------------------
 // --- CONFIGURACIÓN DE SEGURIDAD Y SOPORTE ---
 final DateTime betaExpirationDate = DateTime.utc(2025, 11, 15, 23, 59, 59);
 
 const int betaDurationDays = 14;
-const String accessCode = '060608';
+const String accessCode = '060608'; // 👈 Reemplazar con el código principal
+const String secondaryAccessCode = '091108'; // 👈 Reemplazar con '091108'
+const int maxCodeUses = 3; // Límite de usos para el código secundario
 const String supportEmail = 'psicoamigosoporte@gmail.com';
 const String suicideResponse = 'Lo siento, ocurrió un error.';
 
@@ -19,11 +24,11 @@ const String chatEndpoint =
 
 // --- CONFIGURACIÓN DE MODELOS DE IA (PRIMARY + RESPALDO) ---
 const String primaryModel = 'z-ai/glm-4.5-air:free';
-const String fallbackModel = 'mistralai/Mistral-7B-Instruct-v0.2';
+const String fallbackModel = 'mistralai/mistral-7b-instruct:free';
 // ------------------------------------------------------------
 
 
-// --- TEMAS DE CONVERSACIÓN SUGERIDOS ---
+// --- TEMAS DE CONVERSACIÓN SUGERIDOS (Sin cambios) ---
 final List<Map<String, String>> conversationTopics = [
   {
     'title': 'Manejo del Estrés',
@@ -51,7 +56,7 @@ final List<Map<String, String>> conversationTopics = [
   },
 ];
 
-// --- LÍNEAS DE AYUDA (México) ---
+// --- LÍNEAS DE AYUDA (México) (Sin cambios) ---
 final List<Map<String, dynamic>> emergencyLines = [
   {
     'name': 'CONADIC. Centro de Atención Ciudadana la Línea de la Vida',
@@ -141,7 +146,7 @@ final List<Map<String, dynamic>> emergencyLines = [
   },
 ];
 
-// --- MODELOS DE DATOS DE PERSISTENCIA ---
+// --- MODELOS DE DATOS DE PERSISTENCIA (Sin cambios) ---
 class ChatMessage {
   final String text;
   final bool isUser;
@@ -173,7 +178,7 @@ class SavedChat {
   );
 }
 
-// --- FUNCIONES UTILITARIAS ---
+// --- FUNCIONES UTILITARIAS (Sin cambios) ---
 
 Future<void> launchPhone(String phoneNumber, BuildContext context) async {
   final Uri uri = Uri(scheme: 'tel', path: phoneNumber.replaceAll(' ', ''));
@@ -338,7 +343,16 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
       _message = 'Acceso Beta concedido. La prueba finaliza el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}.';
       _isAccessGranted = true;
     } else {
+      // Mostrar cuántos usos quedan si el código secundario ha sido usado.
+      final uses = prefs.getInt('secondary_code_uses') ?? 0;
+      final remaining = maxCodeUses - uses;
+      
       _message = 'El periodo Beta ha finalizado (expiró el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}). Por favor, introduce el código de acceso.';
+      if (remaining > 0) {
+           _message += ' (El código de extensión tiene $remaining usos restantes).';
+      } else if (uses >= maxCodeUses) {
+           _message += ' (El código de extensión ha sido agotado).';
+      }
       _isAccessGranted = false;
     }
     
@@ -358,40 +372,58 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
       }
     }
   }
-
+  
+  // FUNCIÓN MODIFICADA PARA GESTIONAR EL LÍMITE DE 3 USOS
   void _verifyCode() async {
-    if (_codeController.text == accessCode) {
-      final prefs = await SharedPreferences.getInstance();
+    final String code = _codeController.text;
+    final prefs = await SharedPreferences.getInstance();
+    bool codeAccepted = false;
+    String successMessage = 'Código incorrecto.';
 
-      await prefs.setInt(
-        'first_launch_timestamp',
-        DateTime.now().millisecondsSinceEpoch,
-      );
+    if (code == accessCode) {
+        // Código Principal (Acceso permanente)
+        codeAccepted = true;
+        successMessage = 'Código permanente correcto. Acceso concedido.';
+    } else if (code == secondaryAccessCode) {
+        // Código Secundario (Uso limitado)
+        final uses = prefs.getInt('secondary_code_uses') ?? 0;
 
-      if (mounted) {
+        if (uses < maxCodeUses) {
+            // 1. Restablecer el contador de la Beta (otorga 14 días)
+            await prefs.setInt(
+                'first_launch_timestamp',
+                DateTime.now().millisecondsSinceEpoch,
+            );
+            // 2. Incrementar el contador de usos
+            await prefs.setInt('secondary_code_uses', uses + 1);
+
+            codeAccepted = true;
+            final remainingUses = maxCodeUses - (uses + 1);
+            successMessage = 'Código de extensión correcto. Acceso extendido por $betaDurationDays días. Te quedan $remainingUses usos.';
+        } else {
+            successMessage = 'Este código de extensión ya ha alcanzado su límite de $maxCodeUses usos.';
+        }
+    }
+
+    if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Código correcto. Acceso concedido.',
+            SnackBar(
+                content: Text(successMessage),
             ),
-          ),
         );
-      }
-      final termsAccepted = prefs.getBool('terms_accepted') ?? false;
-      if (termsAccepted) {
-          _navigateToUserInfo();
-      } else {
-          _navigateToTerms();
-      }
+    }
 
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Código incorrecto.')));
-      }
+    if (codeAccepted) {
+        // Navegación (Misma lógica para ambos códigos)
+        final termsAccepted = prefs.getBool('terms_accepted') ?? false;
+        if (termsAccepted) {
+            _navigateToUserInfo();
+        } else {
+            _navigateToTerms();
+        }
     }
   }
+
 
   void _navigateToApp() {
     Navigator.of(
@@ -498,7 +530,8 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
             const Expanded(
               child: SingleChildScrollView(
                 child: Text(
-                  "AVISO IMPORTANTE: Esta es una aplicación en fase Beta (PsicoAmIgo Beta Testers). \n\n1. Naturaleza Experimental: Reconoces que la aplicación puede contener errores, fallos o no funcionar como se espera. \n\n2. Descargo de Responsabilidad Psicológica: PsicoAmIgo NO sustituye la atención médica o psicológica profesional. En caso de crisis o emergencia, contacta inmediatamente a los servicios de emergencia o las líneas de ayuda provistas. Los consejos de la IA son puramente informativos y de apoyo general.\n\n3. Duración: La aplicación está diseñada para operar bajo el programa Beta por un tiempo limitado, después del cual se requerirá un código.\n\n4. Privacidad: Los chats guardados se almacenan localmente en tu dispositivo.\n\nAl marcar la casilla, aceptas estas condiciones.",
+                  // ✏️ TEXTO CORREGIDO: Se refiere al 'código de extensión' sin revelar el valor.
+                  "AVISO IMPORTANTE: Esta es una aplicación en fase Beta (PsicoAmIgo Beta Testers). \n\n1. Naturaleza Experimental: Reconoces que la aplicación puede contener errores, fallos o no funcionar como se espera. \n\n2. Descargo de Responsabilidad Psicológica: PsicoAmIgo NO sustituye la atención médica o psicológica profesional. En caso de crisis o emergencia, contacta inmediatamente a los servicios de emergencia o las líneas de ayuda provistas. Los consejos de la IA son puramente informativos y de apoyo general.\n\n3. Duración y Acceso: La aplicación está diseñada para operar bajo un programa Beta de tiempo limitado. Si el periodo expira, puedes usar un Código de Extensión limitado, el cual solo permite $maxCodeUses usos para obtener un tiempo adicional de prueba.\n\n4. Privacidad: Los chats guardados se almacenan localmente en tu dispositivo.\n\nAl marcar la casilla, aceptas estas condiciones.",
                   style: TextStyle(fontSize: 16),
                 ),
               ),
@@ -612,6 +645,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     _logNewUser(name, _selectedGender!, age);
 
     if (mounted) {
+      // Redirige al inicio de la aplicación, que ahora verificará que los datos estén presentes.
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const PsicoAmIgoApp()),
       );
@@ -1096,7 +1130,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
   }
 }
 
-// --- GESTIÓN DE CHATS (HOMESCREEN) ---
+// --- GESTIÓN DE CHATS (PsicoAmIgoApp y HomeScreen) ---
 
 class PsicoAmIgoApp extends StatefulWidget {
   const PsicoAmIgoApp({super.key});
@@ -1139,6 +1173,15 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
       });
     }
   }
+  
+  // FUNCIÓN PARA FORZAR LA NAVEGACIÓN A USER INFO (Para usar en HomeScreen)
+  void _navigateToUserInfo() {
+    // Usamos pushReplacement para ir a UserInfoScreen y eliminar la pantalla anterior
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UserInfoScreen()),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1259,7 +1302,11 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
         ),
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: HomeScreen(isDarkMode: _isDarkMode, onThemeChanged: toggleTheme),
+      home: HomeScreen(
+        isDarkMode: _isDarkMode, 
+        onThemeChanged: toggleTheme,
+        navigateToUserInfo: _navigateToUserInfo, // 👈 Se pasa la función de navegación
+      ),
     );
   }
 }
@@ -1267,9 +1314,12 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
 class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
+  final Function navigateToUserInfo; // 👈 Función de callback
+  
   const HomeScreen({
     required this.isDarkMode,
     required this.onThemeChanged,
+    required this.navigateToUserInfo,
     super.key,
   });
   @override
@@ -1297,19 +1347,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadUserInfoAndChats(); 
   }
 
+  // 🛑 FUNCIÓN MODIFICADA PARA VERIFICAR LA INTEGRIDAD DE LOS DATOS
   Future<void> _loadUserInfoAndChats() async {
     final prefs = await SharedPreferences.getInstance();
     
-    final name = prefs.getString('user_name') ?? 'Amigo';
-    final gender = prefs.getString('user_gender') ?? 'Neutral';
-    final age = prefs.getString('user_age') ?? 'Desconocida';
-    final issue = prefs.getString('user_issue') ?? 'General';
+    // VERIFICACIÓN CLAVE: Comprobar si los datos esenciales están presentes
+    final name = prefs.getString('user_name');
+    final gender = prefs.getString('user_gender');
+    final age = prefs.getString('user_age');
+    final infoCompleted = prefs.getBool('user_info_completed') ?? false;
 
+    // 🛑 LÓGICA DE REDIRECCIÓN FORZOSA
+    // Si falta alguno de los datos obligatorios o el flag 'completed' es falso, redirige.
+    if (name == null || gender == null || age == null || !infoCompleted) {
+      if (mounted) {
+        widget.navigateToUserInfo(); // Forzar la navegación a UserInfoScreen
+        return; // Detiene la ejecución para no cargar el chat vacío
+      }
+    }
+
+    // Si los datos están completos, continuamos con la carga normal
+    final issue = prefs.getString('user_issue') ?? 'General';
+    
     if (mounted) {
       setState(() {
-        _userName = name;
-        _userGender = gender;
-        _userAge = age; 
+        _userName = name!;
+        _userGender = gender!;
+        _userAge = age!;
         _userIssue = issue;
       });
     }
@@ -1493,21 +1557,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // --- LÓGICA DEL CHATBOT CON CORRECCIÓN ---
+  // --- LÓGICA DEL CHATBOT ---
 
   Future<void> sendMessage(String message) async {
-    // 🛑 CORRECCIÓN DE DOBLE ENVÍO: Bloquea inmediatamente si ya está cargando
+    // 🛑 Bloquea inmediatamente si ya está cargando
     if (message.trim().isEmpty || _isChatLocked || _isLoading) return; 
 
     final lowerCaseMessage = message.toLowerCase();
 
-    // 🛑 CORRECCIÓN DE DOBLE ENVÍO: Activa el estado de carga y agrega el mensaje al instante
+    // 🛑 Activa el estado de carga y agrega el mensaje al instante
     if (mounted) {
       setState(() {
         final capMessage =
             message.substring(0, 1).toUpperCase() + message.substring(1);
         _messages.add(ChatMessage(text: capMessage, isUser: true));
-        _isLoading = true; // 🚀 BLOQUEO INMEDIATO DE LA UI
+        _isLoading = true; 
       });
     }
     _scrollToBottom();
@@ -1554,7 +1618,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    // --- LÓGICA DE LA API (solo si no se salió antes) ---
+    // --- LÓGICA DE LA API ---
     final historyLength = _messages.length > 10 ? _messages.length - 10 : 0;
     final contextMessages = _messages.sublist(historyLength);
     
@@ -2042,7 +2106,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    // 🛑 CORRECCIÓN DE DOBLE ENVÍO: Bloquea si hay crisis O si está cargando.
+                    // 🛑 BLOQUEA SI HAY CRISIS O SI ESTÁ CARGANDO
                     enabled: !_isChatLocked && !_isLoading, 
                     decoration: InputDecoration(
                       hintText: _isChatLocked || _isLoading
@@ -2055,7 +2119,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  // 🛑 CORRECCIÓN DE DOBLE ENVÍO: Bloquea si hay crisis O si está cargando
+                  // 🛑 BLOQUEA SI HAY CRISIS O SI ESTÁ CARGANDO
                   onPressed: _isChatLocked || _isLoading
                       ? null
                       : () => sendMessage(_controller.text),

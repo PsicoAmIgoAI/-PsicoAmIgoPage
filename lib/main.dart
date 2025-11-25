@@ -9,7 +9,7 @@ import 'dart:async';
 // ⚠️ NOTA DE SEGURIDAD: Reemplaza los valores de acceso en tu copia ⚠️
 // ---------------------------------------------------------------------
 // --- CONFIGURACIÓN DE SEGURIDAD Y SOPORTE ---
-final DateTime betaExpirationDate = DateTime.utc(2025, 11, 15, 23, 59, 59);
+final DateTime betaExpirationDate = DateTime.utc(2025, 12, 06, 23, 59, 59);
 
 const int betaDurationDays = 14;
 const String accessCode = '060608'; // 👈 Reemplazar con el código principal
@@ -26,7 +26,6 @@ const String chatEndpoint =
 const String primaryModel = 'z-ai/glm-4.5-air:free';
 const String fallbackModel = 'mistralai/mistral-7b-instruct:free';
 // ------------------------------------------------------------
-
 
 // --- TEMAS DE CONVERSACIÓN SUGERIDOS (Sin cambios) ---
 final List<Map<String, String>> conversationTopics = [
@@ -152,7 +151,7 @@ class ChatMessage {
   final bool isUser;
   ChatMessage({required this.text, required this.isUser});
 
-  Map<String, dynamic> toJson() => {'text': text, 'isUser': isUser}; 
+  Map<String, dynamic> toJson() => {'text': text, 'isUser': isUser};
   factory ChatMessage.fromJson(Map<String, dynamic> json) =>
       ChatMessage(text: json['text'] as String, isUser: json['isUser'] as bool);
 }
@@ -164,10 +163,10 @@ class SavedChat {
 
   SavedChat({required this.title, required this.id, required this.messages});
 
-  Map<String, dynamic> toJson() => { 
+  Map<String, dynamic> toJson() => {
     'title': title,
     'id': id,
-    'messages': messages.map((m) => m.toJson()).toList(), 
+    'messages': messages.map((m) => m.toJson()).toList(),
   };
   factory SavedChat.fromJson(Map<String, dynamic> json) => SavedChat(
     title: json['title'] as String,
@@ -186,22 +185,22 @@ Future<void> launchPhone(String phoneNumber, BuildContext context) async {
     await launchUrl(uri);
   } else {
     if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No se pudo iniciar la llamada. El navegador debe tener permisos.',
-            ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se pudo iniciar la llamada. El navegador debe tener permisos.',
           ),
-        );
+        ),
+      );
     }
   }
 }
 
 Future<void> launchMail(
-    String email,
-    BuildContext context, {
-    String subject = '',
-    String body = '',
+  String email,
+  BuildContext context, {
+  String subject = '',
+  String body = '',
 }) async {
   final Uri uri = Uri(
     scheme: 'mailto',
@@ -229,15 +228,14 @@ void _logNewUser(String name, String gender, String age) {
   print('ANALYTICS: Nuevo usuario registrado: $name, $gender, $age años.');
 }
 
-
 // --- VISTA PRINCIPAL (MAIN) ---
 void main() {
-  WidgetsFlutterBinding.ensureInitialized(); 
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     const MaterialApp(
       title: 'PsicoAmIgo 🤖 (Beta)',
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(), 
+      home: SplashScreen(),
     ),
   );
 }
@@ -299,7 +297,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-
 // 1. Control de Acceso (AccessControlScreen)
 class AccessControlScreen extends StatefulWidget {
   const AccessControlScreen({super.key});
@@ -315,7 +312,6 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
 
   final DateTime expirationDate = betaExpirationDate;
 
-
   @override
   void initState() {
     super.initState();
@@ -328,7 +324,7 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
     final termsAccepted = prefs.getBool('terms_accepted') ?? false;
     final userInfoCompleted = prefs.getBool('user_info_completed') ?? false;
 
-    final now = DateTime.now().toUtc(); 
+    final now = DateTime.now().toUtc();
 
     final bool isExpired = now.isAfter(expirationDate);
 
@@ -337,25 +333,28 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
         'first_launch_timestamp',
         DateTime.now().millisecondsSinceEpoch,
       );
-    } 
+    }
 
     if (!isExpired) {
-      _message = 'Acceso Beta concedido. La prueba finaliza el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}.';
+      _message =
+          'Acceso Beta concedido. La prueba finaliza el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}.';
       _isAccessGranted = true;
     } else {
       // Mostrar cuántos usos quedan si el código secundario ha sido usado.
       final uses = prefs.getInt('secondary_code_uses') ?? 0;
       final remaining = maxCodeUses - uses;
-      
-      _message = 'El periodo Beta ha finalizado (expiró el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}). Por favor, introduce el código de acceso.';
+
+      _message =
+          'El periodo Beta ha finalizado (expiró el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}). Por favor, introduce el código de acceso.';
       if (remaining > 0) {
-           _message += ' (El código de extensión tiene $remaining usos restantes).';
+        _message +=
+            ' (El código de extensión tiene $remaining usos restantes).';
       } else if (uses >= maxCodeUses) {
-           _message += ' (El código de extensión ha sido agotado).';
+        _message += ' (El código de extensión ha sido agotado).';
       }
       _isAccessGranted = false;
     }
-    
+
     if (mounted) {
       setState(() {});
     }
@@ -372,7 +371,7 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
       }
     }
   }
-  
+
   // FUNCIÓN MODIFICADA PARA GESTIONAR EL LÍMITE DE 3 USOS
   void _verifyCode() async {
     final String code = _codeController.text;
@@ -381,49 +380,48 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
     String successMessage = 'Código incorrecto.';
 
     if (code == accessCode) {
-        // Código Principal (Acceso permanente)
-        codeAccepted = true;
-        successMessage = 'Código permanente correcto. Acceso concedido.';
+      // Código Principal (Acceso permanente)
+      codeAccepted = true;
+      successMessage = 'Código permanente correcto. Acceso concedido.';
     } else if (code == secondaryAccessCode) {
-        // Código Secundario (Uso limitado)
-        final uses = prefs.getInt('secondary_code_uses') ?? 0;
+      // Código Secundario (Uso limitado)
+      final uses = prefs.getInt('secondary_code_uses') ?? 0;
 
-        if (uses < maxCodeUses) {
-            // 1. Restablecer el contador de la Beta (otorga 14 días)
-            await prefs.setInt(
-                'first_launch_timestamp',
-                DateTime.now().millisecondsSinceEpoch,
-            );
-            // 2. Incrementar el contador de usos
-            await prefs.setInt('secondary_code_uses', uses + 1);
+      if (uses < maxCodeUses) {
+        // 1. Restablecer el contador de la Beta (otorga 14 días)
+        await prefs.setInt(
+          'first_launch_timestamp',
+          DateTime.now().millisecondsSinceEpoch,
+        );
+        // 2. Incrementar el contador de usos
+        await prefs.setInt('secondary_code_uses', uses + 1);
 
-            codeAccepted = true;
-            final remainingUses = maxCodeUses - (uses + 1);
-            successMessage = 'Código de extensión correcto. Acceso extendido por $betaDurationDays días. Te quedan $remainingUses usos.';
-        } else {
-            successMessage = 'Este código de extensión ya ha alcanzado su límite de $maxCodeUses usos.';
-        }
+        codeAccepted = true;
+        final remainingUses = maxCodeUses - (uses + 1);
+        successMessage =
+            'Código de extensión correcto. Acceso extendido por $betaDurationDays días. Te quedan $remainingUses usos.';
+      } else {
+        successMessage =
+            'Este código de extensión ya ha alcanzado su límite de $maxCodeUses usos.';
+      }
     }
 
     if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(successMessage),
-            ),
-        );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
     }
 
     if (codeAccepted) {
-        // Navegación (Misma lógica para ambos códigos)
-        final termsAccepted = prefs.getBool('terms_accepted') ?? false;
-        if (termsAccepted) {
-            _navigateToUserInfo();
-        } else {
-            _navigateToTerms();
-        }
+      // Navegación (Misma lógica para ambos códigos)
+      final termsAccepted = prefs.getBool('terms_accepted') ?? false;
+      if (termsAccepted) {
+        _navigateToUserInfo();
+      } else {
+        _navigateToTerms();
+      }
     }
   }
-
 
   void _navigateToApp() {
     Navigator.of(
@@ -625,11 +623,16 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   void _saveAndContinue() async {
     final name = _nameController.text.trim();
     final age = _ageController.text.trim();
-    
-    if (name.isEmpty || _selectedGender == null || age.isEmpty || _selectedIssue == null) {
+
+    if (name.isEmpty ||
+        _selectedGender == null ||
+        age.isEmpty ||
+        _selectedIssue == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Por favor, completa todos los campos.')),
+          const SnackBar(
+            content: Text('Por favor, completa todos los campos.'),
+          ),
         );
       }
       return;
@@ -639,9 +642,9 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     await prefs.setString('user_name', name);
     await prefs.setString('user_gender', _selectedGender!);
     await prefs.setString('user_age', age);
-    await prefs.setString('user_issue', _selectedIssue!); 
-    await prefs.setBool('user_info_completed', true); 
-    
+    await prefs.setString('user_issue', _selectedIssue!);
+    await prefs.setBool('user_info_completed', true);
+
     _logNewUser(name, _selectedGender!, age);
 
     if (mounted) {
@@ -655,9 +658,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
       appBar: AppBar(title: const Text('Configuración Inicial')),
@@ -702,7 +703,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
               items: const [
                 DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
                 DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
-                DropdownMenuItem(value: 'Otro/No especificar', child: Text('Otro/No especificar')),
+                DropdownMenuItem(
+                  value: 'Otro/No especificar',
+                  child: Text('Otro/No especificar'),
+                ),
               ],
               onChanged: (String? newValue) {
                 setState(() {
@@ -711,7 +715,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
               },
             ),
             const SizedBox(height: 30),
-            const Text('¿Cuál es tu principal motivo de consulta?', style: TextStyle(fontSize: 16)),
+            const Text(
+              '¿Cuál es tu principal motivo de consulta?',
+              style: TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               value: _selectedIssue,
@@ -724,7 +731,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
               }).toList(),
               onChanged: (String? newValue) {
                 setState(() {
-                _selectedIssue = newValue;
+                  _selectedIssue = newValue;
                 });
               },
             ),
@@ -742,7 +749,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     );
   }
 }
-
 
 // --- VISTAS AUXILIARES (EmergencyLinesScreen y ReportScreen) ---
 
@@ -798,8 +804,7 @@ class EmergencyLinesScreen extends StatelessWidget {
                         icon: const Icon(Icons.phone, size: 16),
                         label: Text(phone),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Colors.redAccent, 
+                          backgroundColor: Colors.redAccent,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -873,10 +878,10 @@ class ReportScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(dialogContext).pop(); 
+                Navigator.of(dialogContext).pop();
                 launchMail(
                   supportEmail,
-                  context, 
+                  context,
                   subject: 'Reporte Beta - $subject',
                   body: bodyController.text,
                 );
@@ -901,12 +906,9 @@ class ReportScreen extends StatelessWidget {
               onPressed: () => _sendEmail(context, 'Fallo'),
               child: const Text('Reportar Fallo por Email'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF9CA2EF), 
-                foregroundColor: Colors.white, 
-                minimumSize: const Size(
-                  250,
-                  50,
-                ), 
+                backgroundColor: const Color(0xFF9CA2EF),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(250, 50),
               ),
             ),
             const SizedBox(height: 20),
@@ -914,12 +916,9 @@ class ReportScreen extends StatelessWidget {
               onPressed: () => _sendEmail(context, 'Sugerencia'),
               child: const Text('Enviar Sugerencia por Email'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7178DF), 
-                foregroundColor: Colors.white, 
-                minimumSize: const Size(
-                  250,
-                  50,
-                ), 
+                backgroundColor: const Color(0xFF7178DF),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(250, 50),
               ),
             ),
             const SizedBox(height: 40),
@@ -976,7 +975,7 @@ Future<void> showEmergencyModal(BuildContext context) async {
           ),
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.of(context).pop(); 
+              Navigator.of(context).pop();
               _showCallConfirmation(context, '8009112000', 'Línea de la Vida');
             },
             icon: const Icon(Icons.phone),
@@ -1003,7 +1002,7 @@ void _showCallConfirmation(BuildContext context, String number, String name) {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop(); 
+              Navigator.of(context).pop();
               launchPhone(number, context);
             },
             child: const Text('Llamar'),
@@ -1016,9 +1015,9 @@ void _showCallConfirmation(BuildContext context, String number, String name) {
 
 // Modal para guardar chat que interactúa con las funciones de persistencia.
 Future<void> showSaveChatModal(
-    BuildContext context,
-    List<ChatMessage> messages,
-    Function(SavedChat) onSave,
+  BuildContext context,
+  List<ChatMessage> messages,
+  Function(SavedChat) onSave,
 ) async {
   final TextEditingController titleController = TextEditingController();
   await showDialog(
@@ -1027,7 +1026,9 @@ Future<void> showSaveChatModal(
       return AlertDialog(
         title: const Text('Guardar Chat (Archivar)'),
         content: TextField(
-          decoration: const InputDecoration(hintText: 'Nombre para archivar este chat'),
+          decoration: const InputDecoration(
+            hintText: 'Nombre para archivar este chat',
+          ),
           controller: titleController,
         ),
         actions: [
@@ -1042,10 +1043,10 @@ Future<void> showSaveChatModal(
                   : titleController.text.trim();
               final newChat = SavedChat(
                 title: title,
-                id: DateTime.now().microsecondsSinceEpoch.toString(), 
+                id: DateTime.now().microsecondsSinceEpoch.toString(),
                 messages: List.from(messages),
               );
-              onSave(newChat); 
+              onSave(newChat);
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
@@ -1150,11 +1151,11 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
 
   Future<void> _loadThemePreference() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     final storedDarkMode = prefs.getBool('dark_mode');
 
-    final bool systemDarkMode = 
-        (storedDarkMode == null) && 
+    final bool systemDarkMode =
+        (storedDarkMode == null) &&
         (MediaQuery.of(context).platformBrightness == Brightness.dark);
 
     if (mounted) {
@@ -1166,14 +1167,14 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
 
   void toggleTheme(bool value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('dark_mode', value); 
+    await prefs.setBool('dark_mode', value);
     if (mounted) {
       setState(() {
         _isDarkMode = value;
       });
     }
   }
-  
+
   // FUNCIÓN PARA FORZAR LA NAVEGACIÓN A USER INFO (Para usar en HomeScreen)
   void _navigateToUserInfo() {
     // Usamos pushReplacement para ir a UserInfoScreen y eliminar la pantalla anterior
@@ -1182,31 +1183,36 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final baseButtonStyle = ButtonStyle(
-      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-      padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
-      textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      padding: WidgetStateProperty.all(
+        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+      textStyle: WidgetStateProperty.all(
+        const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
     );
-    
+
     final lightColorScheme = const ColorScheme.light(
-          primary: Color(0xFF3F448C),
-          onPrimary: Colors.white,
-          secondary: Color(0xFF9CA2EF),
-          onSecondary: Colors.white,
-          surface: Colors.white,
-          onSurface: Colors.black87,
+      primary: Color(0xFF3F448C),
+      onPrimary: Colors.white,
+      secondary: Color(0xFF9CA2EF),
+      onSecondary: Colors.white,
+      surface: Colors.white,
+      onSurface: Colors.black87,
     );
 
     final darkColorScheme = const ColorScheme.dark(
-          primary: Color(0xFF7178DF),
-          onPrimary: Colors.white,
-          secondary: Color(0xFFABBEEF),
-          onSecondary: Colors.white,
-          surface: Color(0xFF2C2E2E),
-          onSurface: Colors.white70,
+      primary: Color(0xFF7178DF),
+      onPrimary: Colors.white,
+      secondary: Color(0xFFABBEEF),
+      onSecondary: Colors.white,
+      surface: Color(0xFF2C2E2E),
+      onSurface: Colors.white70,
     );
 
     return MaterialApp(
@@ -1218,14 +1224,20 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
         scaffoldBackgroundColor: const Color(0xFFECEFF1),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF5A61BD),
-          titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
           iconTheme: IconThemeData(color: Colors.white),
         ),
         colorScheme: lightColorScheme,
         cardTheme: CardThemeData(
           color: Colors.white,
           elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: baseButtonStyle.copyWith(
@@ -1235,8 +1247,11 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF5A61BD), 
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            foregroundColor: const Color(0xFF5A61BD),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -1259,17 +1274,23 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF1b1c1c), 
+        scaffoldBackgroundColor: const Color(0xFF1b1c1c),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF3F448C),
-          titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
           iconTheme: IconThemeData(color: Colors.white),
         ),
         colorScheme: darkColorScheme,
         cardTheme: CardThemeData(
           color: const Color(0xFF2C2E2E),
           elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: baseButtonStyle.copyWith(
@@ -1280,7 +1301,10 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             foregroundColor: const Color(0xFFABBEEF),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -1303,9 +1327,10 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: HomeScreen(
-        isDarkMode: _isDarkMode, 
+        isDarkMode: _isDarkMode,
         onThemeChanged: toggleTheme,
-        navigateToUserInfo: _navigateToUserInfo, // 👈 Se pasa la función de navegación
+        navigateToUserInfo:
+            _navigateToUserInfo, // 👈 Se pasa la función de navegación
       ),
     );
   }
@@ -1315,7 +1340,7 @@ class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
   final Function navigateToUserInfo; // 👈 Función de callback
-  
+
   const HomeScreen({
     required this.isDarkMode,
     required this.onThemeChanged,
@@ -1331,10 +1356,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
   List<ChatMessage> _messages = [];
-  List<SavedChat> _savedChats = []; 
-  bool _isChatLocked = false; 
+  List<SavedChat> _savedChats = [];
+  bool _isChatLocked = false;
 
-  static const String currentChatId = 'CURRENT_ACTIVE_CHAT'; 
+  static const String currentChatId = 'CURRENT_ACTIVE_CHAT';
 
   String _userName = 'Amigo';
   String _userGender = 'Neutral';
@@ -1344,13 +1369,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    _loadUserInfoAndChats(); 
+    _loadUserInfoAndChats();
   }
 
   // 🛑 FUNCIÓN MODIFICADA PARA VERIFICAR LA INTEGRIDAD DE LOS DATOS
   Future<void> _loadUserInfoAndChats() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // VERIFICACIÓN CLAVE: Comprobar si los datos esenciales están presentes
     final name = prefs.getString('user_name');
     final gender = prefs.getString('user_gender');
@@ -1368,7 +1393,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Si los datos están completos, continuamos con la carga normal
     final issue = prefs.getString('user_issue') ?? 'General';
-    
+
     if (mounted) {
       setState(() {
         _userName = name!;
@@ -1380,36 +1405,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _loadArchivedChats(prefs);
   }
-  
-  Future<void> _loadArchivedChats([SharedPreferences? prefs]) async {
-      prefs ??= await SharedPreferences.getInstance();
-      final chatStrings = prefs.getStringList('saved_chats') ?? []; 
-      
-      final List<SavedChat> loadedChats = chatStrings
-          .map(
-            (s) => SavedChat.fromJson(json.decode(s) as Map<String, dynamic>),
-          )
-          .toList();
-          
-      final activeChat = loadedChats.firstWhereOrNull(
-          (chat) => chat.id == currentChatId
-      );
-          
-      if (mounted) {
-          setState(() {
-              _savedChats = loadedChats.where((chat) => chat.id != currentChatId).toList();
-              
-              if (activeChat != null && activeChat.messages.isNotEmpty) {
-                  _messages = activeChat.messages;
-                  _isChatLocked = false;
-                  _scrollToBottom();
-              } else {
-                  _messages = [];
-              }
-          });
-      }
-  }
 
+  Future<void> _loadArchivedChats([SharedPreferences? prefs]) async {
+    prefs ??= await SharedPreferences.getInstance();
+    final chatStrings = prefs.getStringList('saved_chats') ?? [];
+
+    final List<SavedChat> loadedChats = chatStrings
+        .map((s) => SavedChat.fromJson(json.decode(s) as Map<String, dynamic>))
+        .toList();
+
+    final activeChat = loadedChats.firstWhereOrNull(
+      (chat) => chat.id == currentChatId,
+    );
+
+    if (mounted) {
+      setState(() {
+        _savedChats = loadedChats
+            .where((chat) => chat.id != currentChatId)
+            .toList();
+
+        if (activeChat != null && activeChat.messages.isNotEmpty) {
+          _messages = activeChat.messages;
+          _isChatLocked = false;
+          _scrollToBottom();
+        } else {
+          _messages = [];
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -1430,17 +1454,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   // --- PERSISTENCIA DE CHATS ---
-  
+
   // Función de Guardado Automático
   Future<void> _autoSaveCurrentChat() async {
-    if (_messages.isEmpty) return; 
+    if (_messages.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
-    
+
     final currentChat = SavedChat(
-        title: 'Chat Activo (Guardado Automático)', 
-        id: currentChatId, 
-        messages: List.from(_messages),
+      title: 'Chat Activo (Guardado Automático)',
+      id: currentChatId,
+      messages: List.from(_messages),
     );
 
     final List<SavedChat> chatsToSave = List.from(_savedChats);
@@ -1449,31 +1473,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final newChatStrings = chatsToSave
         .map((c) => json.encode(c.toJson()))
         .toList();
-        
+
     await prefs.setStringList('saved_chats', newChatStrings);
   }
 
   // Función de Archivar Chat (Guardado Manual)
   Future<void> _saveChat(SavedChat newChat) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     _savedChats.add(newChat);
-    
+
     final emptyActiveChat = SavedChat(
       title: 'Chat Activo (Guardado Automático)',
       id: currentChatId,
       messages: [],
     );
-    
+
     final List<SavedChat> chatsToSave = List.from(_savedChats);
-    chatsToSave.add(emptyActiveChat); 
+    chatsToSave.add(emptyActiveChat);
 
     final chatStrings = chatsToSave
         .map((c) => json.encode(c.toJson()))
         .toList();
-        
+
     await prefs.setStringList('saved_chats', chatStrings);
-    
+
     if (mounted) {
       setState(() {
         _messages = [];
@@ -1485,24 +1509,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Chat "${newChat.title}" archivado. ¡Nuevo chat iniciado!')),
+        SnackBar(
+          content: Text(
+            'Chat "${newChat.title}" archivado. ¡Nuevo chat iniciado!',
+          ),
+        ),
       );
-      Navigator.of(context).pop(); 
+      Navigator.of(context).pop();
     }
   }
 
   void _deleteChat(String id) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (id == currentChatId) {
-       if (mounted) {
-          setState(() {
-            _messages = [];
-          });
-       }
-       _autoSaveCurrentChat(); 
-       _loadArchivedChats(prefs);
-       return;
+      if (mounted) {
+        setState(() {
+          _messages = [];
+        });
+      }
+      _autoSaveCurrentChat();
+      _loadArchivedChats(prefs);
+      return;
     }
 
     if (mounted) {
@@ -1510,28 +1538,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _savedChats.removeWhere((chat) => chat.id == id);
       });
     }
-    
+
     final activeChat = SavedChat(
       title: 'Chat Activo (Guardado Automático)',
       id: currentChatId,
       messages: _messages,
     );
-    
+
     final List<SavedChat> chatsToSave = List.from(_savedChats);
     chatsToSave.add(activeChat);
 
     final chatStrings = chatsToSave
         .map((c) => json.encode(c.toJson()))
         .toList();
-        
+
     await prefs.setStringList('saved_chats', chatStrings);
-    
+
     if (mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Chat eliminado.')));
     }
-    
+
     _loadArchivedChats(prefs);
   }
 
@@ -1539,9 +1567,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         _messages = messages;
-        _isChatLocked = false; 
+        _isChatLocked = false;
       });
-      Navigator.of(context).pop(); 
+      Navigator.of(context).pop();
       _scrollToBottom();
     }
   }
@@ -1550,10 +1578,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         _messages = [];
-        _isChatLocked = false; 
+        _isChatLocked = false;
       });
-      _autoSaveCurrentChat(); 
-      Navigator.of(context).pop(); 
+      _autoSaveCurrentChat();
+      Navigator.of(context).pop();
     }
   }
 
@@ -1561,7 +1589,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> sendMessage(String message) async {
     // 🛑 Bloquea inmediatamente si ya está cargando
-    if (message.trim().isEmpty || _isChatLocked || _isLoading) return; 
+    if (message.trim().isEmpty || _isChatLocked || _isLoading) return;
 
     final lowerCaseMessage = message.toLowerCase();
 
@@ -1571,13 +1599,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final capMessage =
             message.substring(0, 1).toUpperCase() + message.substring(1);
         _messages.add(ChatMessage(text: capMessage, isUser: true));
-        _isLoading = true; 
+        _isLoading = true;
       });
     }
     _scrollToBottom();
     _controller.clear();
 
-    // 1. DETECCIÓN DE CRISIS
+    // 1. DETECCIÓN DE CRISIS 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥
     final bool isSuicideOrViolence =
         lowerCaseMessage.contains('suicid') ||
         lowerCaseMessage.contains('morir') ||
@@ -1599,9 +1627,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // 2. Detección de "Gracias" (Archivar Chat)
     if (lowerCaseMessage.trim() == 'gracias') {
-      if (_messages.length > 2) { 
+      if (_messages.length > 2) {
         await showSaveChatModal(context, _messages, (chat) {
-            _saveChat(chat); 
+          _saveChat(chat);
         });
       } else {
         if (mounted) {
@@ -1621,41 +1649,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // --- LÓGICA DE LA API ---
     final historyLength = _messages.length > 10 ? _messages.length - 10 : 0;
     final contextMessages = _messages.sublist(historyLength);
-    
+
     final List<String> modelsToTry = [primaryModel, fallbackModel];
     http.Response? response;
-    
+
     for (int i = 0; i < modelsToTry.length; i++) {
       final currentModel = modelsToTry[i];
-      
+
       if (i > 0) {
         await Future.delayed(const Duration(milliseconds: 500));
         print('Intentando con modelo de respaldo: $currentModel');
       }
 
       try {
-        response = await http.post(
-          Uri.parse(chatEndpoint),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: json.encode({
-            'model': currentModel, 
-            'messages': [
-              {
-                'role': 'system',
-                'content':
-                    'Eres PsicoAmIgo, un amigo terapeuta de apoyo emocional y psicológico para $_userName (edad: $_userAge, género: $_userGender, problema principal: $_userIssue). Tu **ÚNICO** objetivo es el bienestar emocional. SIEMPRE debes responder como un terapeuta. **PROHIBICIONES ESTRICTAS:** **NUNCA** utilices listas, viñetas, encabezados, números, o cualquier tipo de formato especial que no sea texto plano y negritas (**). **NUNCA** menciones gestos, pausas, o roleplay (*acciones*). Estás **terminantemente prohibido** de hablar de código, finanzas, negocios, datos fiscales, SAT, o cualquier tema técnico o ajeno a la salud mental. Responde de forma **muy concisa** (máximo 4 párrafos cortos). En ningún momento te saldrás de tu papel y ten en claro que no buscas sustituir a un profesional, solo complementar.',
-              },
-              ...contextMessages.map(
-                (m) => {
-                  'role': m.isUser ? 'user' : 'assistant',
-                  'content': m.text,
-                },
-              ),
-            ],
-          }),
-        ).timeout(const Duration(seconds: 20)); 
+        response = await http
+            .post(
+              Uri.parse(chatEndpoint),
+              headers: {'Content-Type': 'application/json'},
+              body: json.encode({
+                'model': currentModel,
+                'messages': [
+                  {
+                    'role': 'system',
+                    'content':
+                        'Eres PsicoAmIgo, un amigo terapeuta de apoyo emocional y psicológico para $_userName (edad: $_userAge, género: $_userGender, problema principal: $_userIssue). Tu **ÚNICO** objetivo es el bienestar emocional. SIEMPRE debes responder como un terapeuta. **PROHIBICIONES ESTRICTAS:** **NUNCA** utilices listas, viñetas, encabezados, números, o cualquier tipo de formato especial que no sea texto plano y negritas (**). **NUNCA** menciones gestos, pausas, o roleplay (*acciones*). Estás **terminantemente prohibido** de hablar de código, finanzas, negocios, datos fiscales, SAT, o cualquier tema técnico o ajeno a la salud mental. Responde de forma **muy concisa** (máximo 4 párrafos cortos). En ningún momento te saldrás de tu papel y ten en claro que no buscas sustituir a un profesional, solo complementar.',
+                  },
+                  ...contextMessages.map(
+                    (m) => {
+                      'role': m.isUser ? 'user' : 'assistant',
+                      'content': m.text,
+                    },
+                  ),
+                ],
+              }),
+            )
+            .timeout(const Duration(seconds: 20));
 
         if (response.statusCode == 200) {
           final body = json.decode(response.body);
@@ -1669,18 +1697,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               });
             }
             _scrollToBottom();
-            _autoSaveCurrentChat(); 
-            return; 
+            _autoSaveCurrentChat();
+            return;
           }
         }
       } on TimeoutException {
-        print('Timeout en intento $i con modelo $currentModel. Intentando siguiente.');
-        continue; 
+        print(
+          'Timeout en intento $i con modelo $currentModel. Intentando siguiente.',
+        );
+        continue;
       } catch (e) {
         print('Error de red en intento $i con modelo $currentModel: $e');
-        continue; 
+        continue;
       }
-    } 
+    }
 
     if (response != null) {
       _handleApiError('Error de estado: ${response.statusCode}');
@@ -1693,12 +1723,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         String displayMessage;
-        
+
         if (message.contains('429') || message.contains('503')) {
           displayMessage =
               '¡FALLA CRÍTICA DEL SERVICIO! ❌ El servicio de IA está caído o saturado temporalmente. Por favor, intenta de nuevo en unos minutos. El equipo de PsicoAmIgo ha sido notificado.';
         } else if (message.contains('401') || message.contains('403')) {
-           displayMessage = '¡FALLA CRÍTICA! La autenticación con la IA falló (Error 401/403). Esto suele ser un problema con la CLAVE API del Worker. Contacta al soporte.';
+          displayMessage =
+              '¡FALLA CRÍTICA! La autenticación con la IA falló (Error 401/403). Esto suele ser un problema con la CLAVE API del Worker. Contacta al soporte.';
         } else if (message.contains('Error de red')) {
           displayMessage =
               'Error de conexión. Verifica tu conexión a Internet e inténtalo de nuevo.';
@@ -1712,39 +1743,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
     }
     _scrollToBottom();
-    _autoSaveCurrentChat(); 
+    _autoSaveCurrentChat();
   }
 
   // --- WIDGETS DE UI ---
 
   List<SavedChat> _getChatsForDrawer() {
     final List<SavedChat> drawerChats = [];
-    
+
     if (_messages.isNotEmpty) {
-      drawerChats.add(SavedChat(
-        title: 'Chat Activo (Guardado Automático)',
-        id: currentChatId,
-        messages: _messages,
-      ));
+      drawerChats.add(
+        SavedChat(
+          title: 'Chat Activo (Guardado Automático)',
+          id: currentChatId,
+          messages: _messages,
+        ),
+      );
     }
     drawerChats.addAll(_savedChats);
-    
+
     return drawerChats;
   }
 
   List<TextSpan> _parseStructuredText(String text) {
     final List<TextSpan> spans = [];
     final RegExp boldRegExp = RegExp(r'\*\*(.*?)\*\*');
-    final List<String> lines = text.split(RegExp(r'(?:<br>|\n\*\s*)')); 
+    final List<String> lines = text.split(RegExp(r'(?:<br>|\n\*\s*)'));
 
     for (String line in lines) {
       if (line.trim().isEmpty) continue;
 
-      if (line.trim().startsWith('* ') || RegExp(r'^\d+\.\s+').hasMatch(line.trim())) {
-        line = line.trim().replaceFirst(RegExp(r'^\*?\s*(\d+\.)?\s*'), '').trim();
-        spans.add(const TextSpan(text: '\n• ')); 
+      if (line.trim().startsWith('* ') ||
+          RegExp(r'^\d+\.\s+').hasMatch(line.trim())) {
+        line = line
+            .trim()
+            .replaceFirst(RegExp(r'^\*?\s*(\d+\.)?\s*'), '')
+            .trim();
+        spans.add(const TextSpan(text: '\n• '));
       } else if (spans.isNotEmpty && !spans.last.text!.endsWith('\n')) {
-        spans.add(const TextSpan(text: '\n')); 
+        spans.add(const TextSpan(text: '\n'));
       }
 
       int lastMatchEnd = 0;
@@ -1781,10 +1818,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildChatDrawer() {
     final chatsForDrawer = _getChatsForDrawer();
-    
+
     return Drawer(
       child: Container(
-        color: Theme.of(context).cardColor, 
+        color: Theme.of(context).cardColor,
         child: Column(
           children: [
             DrawerHeader(
@@ -1804,7 +1841,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const SizedBox(height: 4),
                       Text(
                         'Usuario: $_userName | Edad: $_userAge',
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -1812,37 +1852,82 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
-              title: Text('Iniciar Nuevo Chat', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              leading: Icon(
+                Icons.add_circle_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: Text(
+                'Iniciar Nuevo Chat',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               onTap: _startNewChat,
             ),
-            Divider(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
+            Divider(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            ),
             Expanded(
               child: chatsForDrawer.isEmpty
-                  ? Center(child: Text('Inicia una conversación para archivarla.', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))))
+                  ? Center(
+                      child: Text(
+                        'Inicia una conversación para archivarla.',
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    )
                   : ListView.builder(
                       itemCount: chatsForDrawer.length,
                       itemBuilder: (context, index) {
                         final chat = chatsForDrawer[index];
                         final isCurrentChat = chat.id == currentChatId;
-                        
-                        return Card( 
-                          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
                           elevation: 1,
                           child: ListTile(
-                            leading: isCurrentChat 
-                                ? Icon(Icons.mode_edit, color: Theme.of(context).colorScheme.secondary) 
-                                : Icon(Icons.chat_bubble_outline, color: Theme.of(context).colorScheme.primary.withOpacity(0.7)),
+                            leading: isCurrentChat
+                                ? Icon(
+                                    Icons.mode_edit,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.secondary,
+                                  )
+                                : Icon(
+                                    Icons.chat_bubble_outline,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.7),
+                                  ),
                             title: Text(
                               chat.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                             ),
-                            subtitle: Text('${chat.messages.length} mensajes', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                            subtitle: Text(
+                              '${chat.messages.length} mensajes',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
                             onTap: () => _loadChat(chat.messages),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.redAccent),
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Colors.redAccent,
+                              ),
                               onPressed: () => _deleteChat(chat.id),
                             ),
                           ),
@@ -1850,12 +1935,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       },
                     ),
             ),
-            Divider(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
+            Divider(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            ),
             ListTile(
-              leading: Icon(Icons.bug_report, color: Theme.of(context).colorScheme.primary),
-              title: Text('Reportar Fallo / Sugerencia', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              leading: Icon(
+                Icons.bug_report,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: Text(
+                'Reportar Fallo / Sugerencia',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               onTap: () {
-                Navigator.of(context).pop(); 
+                Navigator.of(context).pop();
                 Navigator.of(
                   context,
                 ).push(MaterialPageRoute(builder: (_) => const ReportScreen()));
@@ -1863,12 +1958,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             ListTile(
               leading: const Icon(Icons.local_phone, color: Colors.redAccent),
-              title: Text('Líneas de Emergencia', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              title: Text(
+                'Líneas de Emergencia',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               onTap: () {
-                Navigator.of(context).pop(); 
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const EmergencyLinesScreen()));
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const EmergencyLinesScreen(),
+                  ),
+                );
               },
             ),
           ],
@@ -1890,7 +1992,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Container(
                   margin: const EdgeInsets.only(bottom: 20),
                   child: Icon(
-                    Icons.psychology, 
+                    Icons.psychology,
                     size: 100,
                     color: Theme.of(context).colorScheme.secondary,
                   ),
@@ -1901,7 +2003,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface, 
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1910,14 +2012,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), 
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.8),
                   ),
                 ),
                 const SizedBox(height: 30),
                 Text(
                   'Puedes empezar con estos temas:',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -1934,10 +2042,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         color: Theme.of(context).colorScheme.onSecondary,
                         fontWeight: FontWeight.w500,
                       ),
-                      backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.secondary.withOpacity(0.8),
                       elevation: 2,
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     );
                   }).toList(),
                 ),
@@ -1945,7 +2060,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Text(
                   'O simplemente escribe lo que tengas en mente abajo.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)), 
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
               ],
             ),
@@ -1960,7 +2079,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         gradient: LinearGradient(
           colors: widget.isDarkMode
               ? [const Color(0xFF1b1c1c), const Color(0xFF2C2E2E)]
-              : [const Color(0xFFECEFF1), const Color(0xFFF5F5F5)], 
+              : [const Color(0xFFECEFF1), const Color(0xFFF5F5F5)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -1980,10 +2099,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (!message.isUser) 
+                if (!message.isUser)
                   CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.secondary,
-                    child: Icon(Icons.psychology, size: 20, color: Theme.of(context).colorScheme.onSecondary),
+                    child: Icon(
+                      Icons.psychology,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSecondary,
+                    ),
                   ),
                 SizedBox(width: message.isUser ? 0 : 8),
                 Flexible(
@@ -1991,8 +2114,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: message.isUser
-                          ? Theme.of(context).colorScheme.primary 
-                          : Theme.of(context).colorScheme.surface, 
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(18),
                         topRight: const Radius.circular(18),
@@ -2010,7 +2133,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     child: RichText(
                       text: TextSpan(
                         style: TextStyle(
-                          color: message.isUser ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
+                          color: message.isUser
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
                         ),
                         children: _parseStructuredText(message.text),
@@ -2022,7 +2147,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 if (message.isUser) // Avatar del Usuario
                   CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: Icon(Icons.person, size: 20, color: Theme.of(context).colorScheme.onPrimary),
+                    child: Icon(
+                      Icons.person,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                   ),
               ],
             ),
@@ -2056,22 +2185,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      drawer: _buildChatDrawer(), 
+      drawer: _buildChatDrawer(),
       body: Column(
         children: [
-          Expanded(
-            child: _buildChatContent(), 
-          ),
+          Expanded(child: _buildChatContent()),
           if (_isLoading)
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TypingIndicator(dotColor: Theme.of(context).colorScheme.secondary),
+              child: TypingIndicator(
+                dotColor: Theme.of(context).colorScheme.secondary,
+              ),
             ),
           // Barra de entrada de texto
           Container(
             padding: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor, 
+              color: Theme.of(context).cardColor,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -2083,23 +2212,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: Row(
               children: [
                 // Botón de ARCHIVAR MANUALMENTE (Guardar)
-                if (!_isChatLocked && _messages.isNotEmpty) 
+                if (!_isChatLocked && _messages.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: ElevatedButton(
                       onPressed: (!_isLoading)
-                          ? () =>
-                              showSaveChatModal(context, _messages, (chat) {
-                                _saveChat(chat);
-                              })
+                          ? () => showSaveChatModal(context, _messages, (chat) {
+                              _saveChat(chat);
+                            })
                           : null,
-                      child: const Icon(Icons.archive), 
+                      child: const Icon(Icons.archive),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.8),
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary,
                         minimumSize: const Size(50, 48),
                         padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
                       ),
                     ),
                   ),
@@ -2107,12 +2241,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: TextField(
                     controller: _controller,
                     // 🛑 BLOQUEA SI HAY CRISIS O SI ESTÁ CARGANDO
-                    enabled: !_isChatLocked && !_isLoading, 
+                    enabled: !_isChatLocked && !_isLoading,
                     decoration: InputDecoration(
                       hintText: _isChatLocked || _isLoading
                           ? "Esperando respuesta..."
                           : 'Escribe tu mensaje o "gracias" para archivar...',
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                     ),
                     onSubmitted: sendMessage,
                   ),
@@ -2124,11 +2261,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ? null
                       : () => sendMessage(_controller.text),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.secondary, 
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
                     foregroundColor: Theme.of(context).colorScheme.onSecondary,
                     minimumSize: const Size(50, 48),
                     padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
                   ),
                   child: const Icon(Icons.send),
                 ),

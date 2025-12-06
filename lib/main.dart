@@ -9,11 +9,11 @@ import 'dart:async';
 // ⚠️ NOTA DE SEGURIDAD: Reemplaza los valores de acceso en tu copia ⚠️
 // ---------------------------------------------------------------------
 // --- CONFIGURACIÓN DE SEGURIDAD Y SOPORTE ---
-final DateTime betaExpirationDate = DateTime.utc(2025, 12, 06, 23, 59, 59);
+final DateTime betaExpirationDate = DateTime.utc(2026, 01, 20, 23, 59, 59);
 
 const int betaDurationDays = 14;
 const String accessCode = '060608'; // 👈 Reemplazar con el código principal
-const String secondaryAccessCode = '091108'; // 👈 Reemplazar con '091108'
+const String secondaryAccessCode = '';
 const int maxCodeUses = 3; // Límite de usos para el código secundario
 const String supportEmail = 'psicoamigosoporte@gmail.com';
 const String suicideResponse = 'Lo siento, ocurrió un error.';
@@ -27,7 +27,7 @@ const String primaryModel = 'z-ai/glm-4.5-air:free';
 const String fallbackModel = 'mistralai/mistral-7b-instruct:free';
 // ------------------------------------------------------------
 
-// --- TEMAS DE CONVERSACIÓN SUGERIDOS (Sin cambios) ---
+// --- TEMAS DE CONVERSACIÓN SUGERIDOS ---
 final List<Map<String, String>> conversationTopics = [
   {
     'title': 'Manejo del Estrés',
@@ -55,7 +55,7 @@ final List<Map<String, String>> conversationTopics = [
   },
 ];
 
-// --- LÍNEAS DE AYUDA (México) (Sin cambios) ---
+// --- LÍNEAS DE AYUDA (México) ---
 final List<Map<String, dynamic>> emergencyLines = [
   {
     'name': 'CONADIC. Centro de Atención Ciudadana la Línea de la Vida',
@@ -145,7 +145,8 @@ final List<Map<String, dynamic>> emergencyLines = [
   },
 ];
 
-// --- MODELOS DE DATOS DE PERSISTENCIA (Sin cambios) ---
+// --- MODELOS DE DATOS DE PERSISTENCIA ---
+
 class ChatMessage {
   final String text;
   final bool isUser;
@@ -177,7 +178,48 @@ class SavedChat {
   );
 }
 
-// --- FUNCIONES UTILITARIAS (Sin cambios) ---
+// MODELO PARA EL DIARIO DE CRISIS
+class CrisisEntry {
+  final String id;
+  final String date;
+  final String type;
+  final String trigger;
+  final String startTime;
+  final String endTime;
+  final String activities;
+
+  CrisisEntry({
+    required this.id,
+    required this.date,
+    required this.type,
+    required this.trigger,
+    required this.startTime,
+    required this.endTime,
+    required this.activities,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'date': date,
+    'type': type,
+    'trigger': trigger,
+    'startTime': startTime,
+    'endTime': endTime,
+    'activities': activities,
+  };
+
+  factory CrisisEntry.fromJson(Map<String, dynamic> json) => CrisisEntry(
+    id: json['id'],
+    date: json['date'],
+    type: json['type'],
+    trigger: json['trigger'],
+    startTime: json['startTime'],
+    endTime: json['endTime'],
+    activities: json['activities'],
+  );
+}
+
+// --- FUNCIONES UTILITARIAS ---
 
 Future<void> launchPhone(String phoneNumber, BuildContext context) async {
   final Uri uri = Uri(scheme: 'tel', path: phoneNumber.replaceAll(' ', ''));
@@ -340,12 +382,11 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
           'Acceso Beta concedido. La prueba finaliza el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}.';
       _isAccessGranted = true;
     } else {
-      // Mostrar cuántos usos quedan si el código secundario ha sido usado.
       final uses = prefs.getInt('secondary_code_uses') ?? 0;
       final remaining = maxCodeUses - uses;
 
       _message =
-          'El periodo Beta ha finalizado (expiró el ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}). Por favor, introduce el código de acceso.';
+          'El periodo Beta ha finalizado. Por favor, introduce el código de acceso.';
       if (remaining > 0) {
         _message +=
             ' (El código de extensión tiene $remaining usos restantes).';
@@ -372,7 +413,6 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
     }
   }
 
-  // FUNCIÓN MODIFICADA PARA GESTIONAR EL LÍMITE DE 3 USOS
   void _verifyCode() async {
     final String code = _codeController.text;
     final prefs = await SharedPreferences.getInstance();
@@ -380,26 +420,20 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
     String successMessage = 'Código incorrecto.';
 
     if (code == accessCode) {
-      // Código Principal (Acceso permanente)
       codeAccepted = true;
       successMessage = 'Código permanente correcto. Acceso concedido.';
     } else if (code == secondaryAccessCode) {
-      // Código Secundario (Uso limitado)
       final uses = prefs.getInt('secondary_code_uses') ?? 0;
-
       if (uses < maxCodeUses) {
-        // 1. Restablecer el contador de la Beta (otorga 14 días)
         await prefs.setInt(
           'first_launch_timestamp',
           DateTime.now().millisecondsSinceEpoch,
         );
-        // 2. Incrementar el contador de usos
         await prefs.setInt('secondary_code_uses', uses + 1);
-
         codeAccepted = true;
         final remainingUses = maxCodeUses - (uses + 1);
         successMessage =
-            'Código de extensión correcto. Acceso extendido por $betaDurationDays días. Te quedan $remainingUses usos.';
+            'Código de extensión correcto. Acceso extendido. Te quedan $remainingUses usos.';
       } else {
         successMessage =
             'Este código de extensión ya ha alcanzado su límite de $maxCodeUses usos.';
@@ -413,7 +447,6 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
     }
 
     if (codeAccepted) {
-      // Navegación (Misma lógica para ambos códigos)
       final termsAccepted = prefs.getBool('terms_accepted') ?? false;
       if (termsAccepted) {
         _navigateToUserInfo();
@@ -481,8 +514,7 @@ class _AccessControlScreenState extends State<AccessControlScreen> {
   }
 }
 
-// 2. Términos y Condiciones (TermsAndConditionsScreen)
-
+// 2. Términos y Condiciones
 class TermsAndConditionsScreen extends StatefulWidget {
   const TermsAndConditionsScreen({super.key});
 
@@ -528,8 +560,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
             const Expanded(
               child: SingleChildScrollView(
                 child: Text(
-                  // ✏️ TEXTO CORREGIDO: Se refiere al 'código de extensión' sin revelar el valor.
-                  "AVISO IMPORTANTE: Esta es una aplicación en fase Beta (PsicoAmIgo Beta Testers). \n\n1. Naturaleza Experimental: Reconoces que la aplicación puede contener errores, fallos o no funcionar como se espera. \n\n2. Descargo de Responsabilidad Psicológica: PsicoAmIgo NO sustituye la atención médica o psicológica profesional. En caso de crisis o emergencia, contacta inmediatamente a los servicios de emergencia o las líneas de ayuda provistas. Los consejos de la IA son puramente informativos y de apoyo general.\n\n3. Duración y Acceso: La aplicación está diseñada para operar bajo un programa Beta de tiempo limitado. Si el periodo expira, puedes usar un Código de Extensión limitado, el cual solo permite $maxCodeUses usos para obtener un tiempo adicional de prueba.\n\n4. Privacidad: Los chats guardados se almacenan localmente en tu dispositivo.\n\nAl marcar la casilla, aceptas estas condiciones.",
+                  "AVISO IMPORTANTE: Esta es una aplicación en fase Beta (PsicoAmIgo Beta Testers). \n\n1. Naturaleza Experimental: Reconoces que la aplicación puede contener errores, fallos o no funcionar como se espera. \n\n2. Descargo de Responsabilidad Psicológica: PsicoAmIgo NO sustituye la atención médica o psicológica profesional. En caso de crisis o emergencia, contacta inmediatamente a los servicios de emergencia o las líneas de ayuda provistas.\n\nAl marcar la casilla, aceptas estas condiciones.",
                   style: TextStyle(fontSize: 16),
                 ),
               ),
@@ -562,7 +593,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
   }
 }
 
-// 3. Pantalla de Información del Usuario (UserInfoScreen)
+// 3. Información del Usuario (CON VALIDACIÓN DE EDAD)
 class UserInfoScreen extends StatefulWidget {
   const UserInfoScreen({super.key});
 
@@ -600,30 +631,19 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     final age = prefs.getString('user_age');
     final issue = prefs.getString('user_issue');
 
-    if (name != null) {
-      _nameController.text = name;
-    }
-    if (gender != null) {
-      _selectedGender = gender;
-    }
-    if (age != null) {
-      _ageController.text = age;
-    }
-    if (issue != null) {
-      _selectedIssue = issue;
-    }
+    if (name != null) _nameController.text = name;
+    if (gender != null) _selectedGender = gender;
+    if (age != null) _ageController.text = age;
+    if (issue != null) _selectedIssue = issue;
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   void _saveAndContinue() async {
     final name = _nameController.text.trim();
     final age = _ageController.text.trim();
 
+    // VALIDACIÓN BÁSICA DE CAMPOS VACÍOS
     if (name.isEmpty ||
         _selectedGender == null ||
         age.isEmpty ||
@@ -632,6 +652,20 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Por favor, completa todos los campos.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 🛑 VALIDACIÓN ESTRICTA DE EDAD
+    // Verifica si la edad contiene solo números
+    if (int.tryParse(age) == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('La edad debe ser un número válido.'),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -648,7 +682,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     _logNewUser(name, _selectedGender!, age);
 
     if (mounted) {
-      // Redirige al inicio de la aplicación, que ahora verificará que los datos estén presentes.
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const PsicoAmIgoApp()),
       );
@@ -685,15 +718,13 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
             const SizedBox(height: 20),
             TextField(
               controller: _ageController,
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.number, // 👈 Teclado Numérico
               decoration: const InputDecoration(
-                labelText: 'Tu Edad',
+                labelText: 'Tu Edad (Solo números)',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 30),
-            const Text('Selecciona tu género:', style: TextStyle(fontSize: 16)),
-            const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               value: _selectedGender,
               decoration: const InputDecoration(
@@ -708,32 +739,19 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                   child: Text('Otro/No especificar'),
                 ),
               ],
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedGender = newValue;
-                });
-              },
+              onChanged: (val) => setState(() => _selectedGender = val),
             ),
             const SizedBox(height: 30),
-            const Text(
-              '¿Cuál es tu principal motivo de consulta?',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               value: _selectedIssue,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: 'Selecciona un tema',
+                hintText: 'Motivo de consulta',
               ),
               items: issuesList.map((issue) {
                 return DropdownMenuItem(value: issue, child: Text(issue));
               }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedIssue = newValue;
-                });
-              },
+              onChanged: (val) => setState(() => _selectedIssue = val),
             ),
             const SizedBox(height: 40),
             ElevatedButton(
@@ -750,8 +768,293 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 }
 
-// --- VISTAS AUXILIARES (EmergencyLinesScreen y ReportScreen) ---
+// 4. PANTALLA DIARIO DE CRISIS
+class CrisisLogScreen extends StatefulWidget {
+  const CrisisLogScreen({super.key});
 
+  @override
+  State<CrisisLogScreen> createState() => _CrisisLogScreenState();
+}
+
+class _CrisisLogScreenState extends State<CrisisLogScreen> {
+  List<CrisisEntry> _logs = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLogs();
+  }
+
+  Future<void> _loadLogs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final logStrings = prefs.getStringList('crisis_logs') ?? [];
+
+    setState(() {
+      _logs = logStrings
+          .map((s) => CrisisEntry.fromJson(json.decode(s)))
+          .toList();
+      _logs.sort((a, b) => b.date.compareTo(a.date));
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveLog(CrisisEntry entry) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _logs.insert(0, entry);
+    });
+
+    final logStrings = _logs.map((e) => json.encode(e.toJson())).toList();
+    await prefs.setStringList('crisis_logs', logStrings);
+  }
+
+  Future<void> _deleteLog(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _logs.removeWhere((e) => e.id == id);
+    });
+    final logStrings = _logs.map((e) => json.encode(e.toJson())).toList();
+    await prefs.setStringList('crisis_logs', logStrings);
+  }
+
+  Future<void> _showAddLogDialog() async {
+    final typeController = TextEditingController();
+    final triggerController = TextEditingController();
+    final activitiesController = TextEditingController();
+    
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay startTime = TimeOfDay.now();
+    TimeOfDay endTime = TimeOfDay.now();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 20, 
+                right: 20, 
+                top: 20
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nuevo Registro de Crisis',
+                      style: TextStyle(
+                        fontSize: 22, 
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.calendar_today),
+                      title: Text("Fecha: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}"),
+                      trailing: TextButton(
+                        child: const Text("Cambiar"),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setModalState(() => selectedDate = picked);
+                          }
+                        },
+                      ),
+                    ),
+                    const Divider(),
+                    TextField(
+                      controller: typeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo de Crisis (Ej. Ansiedad, Pánico)',
+                        prefixIcon: Icon(Icons.category),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: triggerController,
+                      decoration: const InputDecoration(
+                        labelText: '¿Qué la detonó?',
+                        prefixIcon: Icon(Icons.flash_on),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text("Inicio"),
+                            subtitle: Text(startTime.format(context)),
+                            onTap: () async {
+                              final picked = await showTimePicker(context: context, initialTime: startTime);
+                              if (picked != null) setModalState(() => startTime = picked);
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text("Fin"),
+                            subtitle: Text(endTime.format(context)),
+                            onTap: () async {
+                              final picked = await showTimePicker(context: context, initialTime: endTime);
+                              if (picked != null) setModalState(() => endTime = picked);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: activitiesController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: '¿Qué hiciste para resolverla?',
+                        alignLabelWithHint: true,
+                        prefixIcon: Icon(Icons.self_improvement),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (typeController.text.isEmpty) {
+                            return; 
+                          }
+                          final newEntry = CrisisEntry(
+                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            date: selectedDate.toIso8601String(),
+                            type: typeController.text,
+                            trigger: triggerController.text.isEmpty ? "No especificado" : triggerController.text,
+                            startTime: startTime.format(context),
+                            endTime: endTime.format(context),
+                            activities: activitiesController.text.isEmpty ? "Ninguna en específico" : activitiesController.text,
+                          );
+                          _saveLog(newEntry);
+                          Navigator.pop(context);
+                        },
+                        child: const Text("Guardar Registro"),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Diario de Crisis')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddLogDialog,
+        icon: const Icon(Icons.add),
+        label: const Text("Registrar Crisis"),
+        backgroundColor: Theme.of(context).primaryColor,
+      ),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : _logs.isEmpty 
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.book_outlined, size: 80, color: Colors.grey[400]),
+                  const SizedBox(height: 20),
+                  Text(
+                    "No hay registros aún.",
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                  ),
+                  const Text("Usa el botón para agregar uno."),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _logs.length,
+              itemBuilder: (context, index) {
+                final log = _logs[index];
+                final date = DateTime.parse(log.date);
+                
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Chip(
+                              label: Text(
+                                log.type.toUpperCase(),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                              backgroundColor: Colors.redAccent.withOpacity(0.1),
+                              labelStyle: const TextStyle(color: Colors.redAccent),
+                            ),
+                            Text(
+                              "${date.day}/${date.month}/${date.year}",
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        const Divider(),
+                        Row(
+                          children: [
+                            const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                            const SizedBox(width: 5),
+                            Text("Duración: ${log.startTime} - ${log.endTime}", style: const TextStyle(fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text("⚡ Detonante:", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(log.trigger),
+                        const SizedBox(height: 10),
+                        const Text("🛡️ Actividades realizadas:", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(log.activities),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                            onPressed: () => _deleteLog(log.id),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+// VISTAS AUXILIARES 
 class EmergencyLinesScreen extends StatelessWidget {
   const EmergencyLinesScreen({super.key});
 
@@ -775,29 +1078,16 @@ class EmergencyLinesScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Color(0xFF5A61BD),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          line['name']!,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    line['name']!,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
-                  const Divider(height: 20, color: Colors.black12),
+                  const Divider(),
                   Wrap(
                     spacing: 8.0,
-                    runSpacing: 4.0,
                     children: (line['phones'] as List<String>).map((phone) {
                       return ElevatedButton.icon(
                         onPressed: () => launchPhone(phone, context),
@@ -806,41 +1096,13 @@ class EmergencyLinesScreen extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.redAccent,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
                         ),
                       );
                     }).toList(),
                   ),
                   if (line['email'] != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.email, size: 16, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(
-                            line['email']!,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      line['schedule']!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
+                    Text("Email: ${line['email']}"),
+                  Text(line['schedule']!, style: const TextStyle(fontStyle: FontStyle.italic)),
                 ],
               ),
             ),
@@ -863,9 +1125,7 @@ class ReportScreen extends StatelessWidget {
           title: Text(subject == 'Fallo' ? 'Reportar Fallo' : 'Sugerencia'),
           content: TextField(
             decoration: InputDecoration(
-              hintText: subject == 'Fallo'
-                  ? 'Describe el fallo encontrado...'
-                  : 'Describe tu sugerencia...',
+              hintText: 'Describe tu mensaje...',
               border: const OutlineInputBorder(),
             ),
             controller: bodyController,
@@ -904,28 +1164,12 @@ class ReportScreen extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () => _sendEmail(context, 'Fallo'),
-              child: const Text('Reportar Fallo por Email'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF9CA2EF),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(250, 50),
-              ),
+              child: const Text('Reportar Fallo'),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => _sendEmail(context, 'Sugerencia'),
-              child: const Text('Enviar Sugerencia por Email'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7178DF),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(250, 50),
-              ),
-            ),
-            const SizedBox(height: 40),
-            Text(
-              'Los reportes se envían a $supportEmail o al grupo oficial PsicoAmigo.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+              child: const Text('Enviar Sugerencia'),
             ),
           ],
         ),
@@ -979,7 +1223,7 @@ Future<void> showEmergencyModal(BuildContext context) async {
               _showCallConfirmation(context, '8009112000', 'Línea de la Vida');
             },
             icon: const Icon(Icons.phone),
-            label: const Text('Llamar a Línea de la Vida'),
+            label: const Text('Llamar'),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
           ),
         ],
@@ -1013,7 +1257,6 @@ void _showCallConfirmation(BuildContext context, String number, String name) {
   );
 }
 
-// Modal para guardar chat que interactúa con las funciones de persistencia.
 Future<void> showSaveChatModal(
   BuildContext context,
   List<ChatMessage> messages,
@@ -1047,9 +1290,8 @@ Future<void> showSaveChatModal(
                 messages: List.from(messages),
               );
               onSave(newChat);
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
+              // Cerrar el diálogo
+              if (context.mounted) Navigator.of(context).pop();
             },
             child: const Text('Archivar'),
           ),
@@ -1059,7 +1301,7 @@ Future<void> showSaveChatModal(
   );
 }
 
-// --- WIDGET PARA LA ANIMACIÓN DE "TYPING" ---
+// --- WIDGET TYPING ---
 class TypingIndicator extends StatefulWidget {
   final Color dotColor;
   const TypingIndicator({super.key, required this.dotColor});
@@ -1175,9 +1417,7 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
     }
   }
 
-  // FUNCIÓN PARA FORZAR LA NAVEGACIÓN A USER INFO (Para usar en HomeScreen)
   void _navigateToUserInfo() {
-    // Usamos pushReplacement para ir a UserInfoScreen y eliminar la pantalla anterior
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const UserInfoScreen()),
     );
@@ -1329,8 +1569,7 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
       home: HomeScreen(
         isDarkMode: _isDarkMode,
         onThemeChanged: toggleTheme,
-        navigateToUserInfo:
-            _navigateToUserInfo, // 👈 Se pasa la función de navegación
+        navigateToUserInfo: _navigateToUserInfo, 
       ),
     );
   }
@@ -1339,7 +1578,7 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
 class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
-  final Function navigateToUserInfo; // 👈 Función de callback
+  final Function navigateToUserInfo;
 
   const HomeScreen({
     required this.isDarkMode,
@@ -1358,6 +1597,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<ChatMessage> _messages = [];
   List<SavedChat> _savedChats = [];
   bool _isChatLocked = false;
+  
+  // Variables para el recordatorio
+  int _interactionsCount = 0;
+  static const int _disclaimerFrequency = 7; 
 
   static const String currentChatId = 'CURRENT_ACTIVE_CHAT';
 
@@ -1372,26 +1615,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadUserInfoAndChats();
   }
 
-  // 🛑 FUNCIÓN MODIFICADA PARA VERIFICAR LA INTEGRIDAD DE LOS DATOS
   Future<void> _loadUserInfoAndChats() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // VERIFICACIÓN CLAVE: Comprobar si los datos esenciales están presentes
     final name = prefs.getString('user_name');
     final gender = prefs.getString('user_gender');
     final age = prefs.getString('user_age');
     final infoCompleted = prefs.getBool('user_info_completed') ?? false;
 
-    // 🛑 LÓGICA DE REDIRECCIÓN FORZOSA
-    // Si falta alguno de los datos obligatorios o el flag 'completed' es falso, redirige.
     if (name == null || gender == null || age == null || !infoCompleted) {
       if (mounted) {
-        widget.navigateToUserInfo(); // Forzar la navegación a UserInfoScreen
-        return; // Detiene la ejecución para no cargar el chat vacío
+        widget.navigateToUserInfo();
+        return;
       }
     }
 
-    // Si los datos están completos, continuamos con la carga normal
     final issue = prefs.getString('user_issue') ?? 'General';
 
     if (mounted) {
@@ -1453,72 +1691,78 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  // --- PERSISTENCIA DE CHATS ---
-
-  // Función de Guardado Automático
+  // 🔥 1. AUTOGUARDADO SEGURO
   Future<void> _autoSaveCurrentChat() async {
     if (_messages.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
+
+    final List<String> currentListStrings = prefs.getStringList('saved_chats') ?? [];
+    List<SavedChat> diskChats = currentListStrings
+        .map((s) => SavedChat.fromJson(json.decode(s)))
+        .toList();
+
+    diskChats.removeWhere((c) => c.id == currentChatId);
 
     final currentChat = SavedChat(
       title: 'Chat Activo (Guardado Automático)',
       id: currentChatId,
       messages: List.from(_messages),
     );
+    diskChats.add(currentChat);
 
-    final List<SavedChat> chatsToSave = List.from(_savedChats);
-    chatsToSave.add(currentChat);
-
-    final newChatStrings = chatsToSave
-        .map((c) => json.encode(c.toJson()))
-        .toList();
-
-    await prefs.setStringList('saved_chats', newChatStrings);
+    final newListStrings = diskChats.map((c) => json.encode(c.toJson())).toList();
+    await prefs.setStringList('saved_chats', newListStrings);
   }
 
-  // Función de Archivar Chat (Guardado Manual)
+  // 🔥 2. GUARDADO MANUAL (SNAPSHOT) - NO BORRA PANTALLA
   Future<void> _saveChat(SavedChat newChat) async {
     final prefs = await SharedPreferences.getInstance();
 
-    _savedChats.add(newChat);
-
-    final emptyActiveChat = SavedChat(
-      title: 'Chat Activo (Guardado Automático)',
-      id: currentChatId,
-      messages: [],
-    );
-
-    final List<SavedChat> chatsToSave = List.from(_savedChats);
-    chatsToSave.add(emptyActiveChat);
-
-    final chatStrings = chatsToSave
-        .map((c) => json.encode(c.toJson()))
+    final List<String> currentListStrings = prefs.getStringList('saved_chats') ?? [];
+    List<SavedChat> diskChats = currentListStrings
+        .map((s) => SavedChat.fromJson(json.decode(s)))
         .toList();
 
-    await prefs.setStringList('saved_chats', chatStrings);
+    // Elimina versión previa del activo para actualizar
+    diskChats.removeWhere((c) => c.id == currentChatId);
 
-    if (mounted) {
-      setState(() {
-        _messages = [];
-        _isChatLocked = false;
-      });
-    }
+    // 1. Crea un ID ÚNICO para el archivo
+    final archiveId = DateTime.now().millisecondsSinceEpoch.toString();
+    final archivedChat = SavedChat(
+      title: newChat.title,
+      id: archiveId, // ID único para el historial
+      messages: List.from(newChat.messages),
+    );
+    diskChats.add(archivedChat);
 
+    // 2. Mantiene el chat activo actual (NO LO BORRA)
+    final activeChatToKeep = SavedChat(
+      title: 'Chat Activo (Guardado Automático)',
+      id: currentChatId,
+      messages: List.from(_messages), 
+    );
+    diskChats.add(activeChatToKeep);
+
+    // 3. Guardar todo
+    final newListStrings = diskChats.map((c) => json.encode(c.toJson())).toList();
+    await prefs.setStringList('saved_chats', newListStrings);
+
+    // 4. Actualizar menú lateral SIN BORRAR CHAT ACTUAL
     _loadArchivedChats(prefs);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Chat "${newChat.title}" archivado. ¡Nuevo chat iniciado!',
+            'Chat "${newChat.title}" archivado en el historial. Puedes seguir escribiendo.',
           ),
         ),
       );
-      Navigator.of(context).pop();
     }
   }
 
+  // 🔥 3. BORRADO SEGURO
   void _deleteChat(String id) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -1526,33 +1770,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _messages = [];
+          _interactionsCount = 0;
         });
       }
-      _autoSaveCurrentChat();
+      _autoSaveCurrentChat(); 
       _loadArchivedChats(prefs);
       return;
     }
 
-    if (mounted) {
-      setState(() {
-        _savedChats.removeWhere((chat) => chat.id == id);
-      });
-    }
-
-    final activeChat = SavedChat(
-      title: 'Chat Activo (Guardado Automático)',
-      id: currentChatId,
-      messages: _messages,
-    );
-
-    final List<SavedChat> chatsToSave = List.from(_savedChats);
-    chatsToSave.add(activeChat);
-
-    final chatStrings = chatsToSave
-        .map((c) => json.encode(c.toJson()))
+    final List<String> currentListStrings = prefs.getStringList('saved_chats') ?? [];
+    List<SavedChat> diskChats = currentListStrings
+        .map((s) => SavedChat.fromJson(json.decode(s)))
         .toList();
 
-    await prefs.setStringList('saved_chats', chatStrings);
+    diskChats.removeWhere((chat) => chat.id == id);
+
+    final newListStrings = diskChats.map((c) => json.encode(c.toJson())).toList();
+    await prefs.setStringList('saved_chats', newListStrings);
 
     if (mounted) {
       ScaffoldMessenger.of(
@@ -1579,6 +1813,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         _messages = [];
         _isChatLocked = false;
+        _interactionsCount = 0;
       });
       _autoSaveCurrentChat();
       Navigator.of(context).pop();
@@ -1588,12 +1823,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // --- LÓGICA DEL CHATBOT ---
 
   Future<void> sendMessage(String message) async {
-    // 🛑 Bloquea inmediatamente si ya está cargando
     if (message.trim().isEmpty || _isChatLocked || _isLoading) return;
 
     final lowerCaseMessage = message.toLowerCase();
 
-    // 🛑 Activa el estado de carga y agrega el mensaje al instante
     if (mounted) {
       setState(() {
         final capMessage =
@@ -1605,7 +1838,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _scrollToBottom();
     _controller.clear();
 
-    // 1. DETECCIÓN DE CRISIS 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥
     final bool isSuicideOrViolence =
         lowerCaseMessage.contains('suicid') ||
         lowerCaseMessage.contains('morir') ||
@@ -1619,13 +1851,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _isChatLocked = true;
-          _isLoading = false; // Desbloquear si no se va a la API
+          _isLoading = false;
         });
       }
       return;
     }
 
-    // 2. Detección de "Gracias" (Archivar Chat)
     if (lowerCaseMessage.trim() == 'gracias') {
       if (_messages.length > 2) {
         await showSaveChatModal(context, _messages, (chat) {
@@ -1640,7 +1871,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       if (mounted) {
         setState(() {
-          _isLoading = false; // Desbloquear si no se va a la API
+          _isLoading = false;
         });
       }
       return;
@@ -1672,7 +1903,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   {
                     'role': 'system',
                     'content':
-                        'Eres PsicoAmIgo, un amigo terapeuta de apoyo emocional y psicológico para $_userName (edad: $_userAge, género: $_userGender, problema principal: $_userIssue). Tu **ÚNICO** objetivo es el bienestar emocional. SIEMPRE debes responder como un terapeuta. **PROHIBICIONES ESTRICTAS:** **NUNCA** utilices listas, viñetas, encabezados, números, o cualquier tipo de formato especial que no sea texto plano y negritas (**). **NUNCA** menciones gestos, pausas, o roleplay (*acciones*). Estás **terminantemente prohibido** de hablar de código, finanzas, negocios, datos fiscales, SAT, o cualquier tema técnico o ajeno a la salud mental. Responde de forma **muy concisa** (máximo 4 párrafos cortos). En ningún momento te saldrás de tu papel y ten en claro que no buscas sustituir a un profesional, solo complementar.',
+                        'Eres PsicoAmIgo, un amigo terapeuta de apoyo emocional y psicológico para $_userName (edad: $_userAge, género: $_userGender, problema principal: $_userIssue). Tu **ÚNICO** objetivo es el bienestar emocional. SIEMPRE debes responder como un terapeuta. **PROHIBICIONES ESTRICTAS:** **NUNCA** utilices listas, viñetas, encabezados, números, o cualquier tipo de formato especial que no sea texto plano y negritas (**). **NUNCA** menciones gestos, pausas, o roleplay (*acciones*). Usa **negritas** para resaltar conceptos clave. Estás **terminantemente prohibido** de hablar de código, finanzas, negocios, datos fiscales, SAT, o cualquier tema técnico o ajeno a la salud mental. Responde de forma **muy concisa** (máximo 4 párrafos cortos). En ningún momento te saldrás de tu papel y ten en claro que no buscas sustituir a un profesional, solo complementar.',
                   },
                   ...contextMessages.map(
                     (m) => {
@@ -1693,7 +1924,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             if (mounted) {
               setState(() {
                 _messages.add(ChatMessage(text: reply, isUser: false));
-                _isLoading = false; // Desbloquear
+                _isLoading = false; 
+                
+                // 🔔 LÓGICA DE RECORDATORIO
+                _interactionsCount++;
+                if (_interactionsCount % _disclaimerFrequency == 0) {
+                  _messages.add(ChatMessage(
+                    text: "**Recordatorio:** Soy PsicoAmIgo, una herramienta de inteligencia artificial para apoyo emocional. No soy un psicólogo humano ni sustituyo la terapia profesional. Si te sientes en riesgo, por favor usa las líneas de ayuda en el menú.",
+                    isUser: false
+                  ));
+                }
               });
             }
             _scrollToBottom();
@@ -1702,12 +1942,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
         }
       } on TimeoutException {
-        print(
-          'Timeout en intento $i con modelo $currentModel. Intentando siguiente.',
-        );
         continue;
       } catch (e) {
-        print('Error de red en intento $i con modelo $currentModel: $e');
         continue;
       }
     }
@@ -1723,13 +1959,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         String displayMessage;
-
         if (message.contains('429') || message.contains('503')) {
           displayMessage =
-              '¡FALLA CRÍTICA DEL SERVICIO! ❌ El servicio de IA está caído o saturado temporalmente. Por favor, intenta de nuevo en unos minutos. El equipo de PsicoAmIgo ha sido notificado.';
+              '¡FALLA CRÍTICA DEL SERVICIO! ❌ El servicio de IA está caído o saturado temporalmente. Por favor, intenta de nuevo en unos minutos.';
         } else if (message.contains('401') || message.contains('403')) {
           displayMessage =
-              '¡FALLA CRÍTICA! La autenticación con la IA falló (Error 401/403). Esto suele ser un problema con la CLAVE API del Worker. Contacta al soporte.';
+              '¡FALLA CRÍTICA! La autenticación con la IA falló.';
         } else if (message.contains('Error de red')) {
           displayMessage =
               'Error de conexión. Verifica tu conexión a Internet e inténtalo de nuevo.';
@@ -1737,9 +1972,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           displayMessage =
               'Ha ocurrido un error inesperado en el servidor. Intenta de nuevo.';
         }
-
         _messages.add(ChatMessage(text: displayMessage, isUser: false));
-        _isLoading = false; // Desbloquear
+        _isLoading = false; 
       });
     }
     _scrollToBottom();
@@ -1750,7 +1984,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   List<SavedChat> _getChatsForDrawer() {
     final List<SavedChat> drawerChats = [];
-
     if (_messages.isNotEmpty) {
       drawerChats.add(
         SavedChat(
@@ -1761,7 +1994,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
     drawerChats.addAll(_savedChats);
-
     return drawerChats;
   }
 
@@ -1775,10 +2007,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (line.trim().startsWith('* ') ||
           RegExp(r'^\d+\.\s+').hasMatch(line.trim())) {
-        line = line
-            .trim()
-            .replaceFirst(RegExp(r'^\*?\s*(\d+\.)?\s*'), '')
-            .trim();
+        line = line.trim().replaceFirst(RegExp(r'^\*?\s*(\d+\.)?\s*'), '').trim();
         spans.add(const TextSpan(text: '\n• '));
       } else if (spans.isNotEmpty && !spans.last.text!.endsWith('\n')) {
         spans.add(const TextSpan(text: '\n'));
@@ -1790,28 +2019,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (match.start > lastMatchEnd) {
           spans.add(TextSpan(text: line.substring(lastMatchEnd, match.start)));
         }
-
         spans.add(
           TextSpan(
             text: match.group(1),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         );
-
         lastMatchEnd = match.end;
       }
-
       if (lastMatchEnd < line.length) {
         spans.add(TextSpan(text: line.substring(lastMatchEnd)));
       }
     }
 
-    if (spans.isNotEmpty && spans[0].text == '\n') {
-      spans.removeAt(0);
-    }
-    if (spans.isNotEmpty && !spans.last.text!.endsWith('\n')) {
-      spans.add(const TextSpan(text: '\n'));
-    }
+    if (spans.isNotEmpty && spans[0].text == '\n') spans.removeAt(0);
+    if (spans.isNotEmpty && !spans.last.text!.endsWith('\n')) spans.add(const TextSpan(text: '\n'));
 
     return spans;
   }
@@ -1840,7 +2062,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Usuario: $_userName | Edad: $_userAge',
+                        'Usuario: $_userName',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -1864,18 +2086,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               onTap: _startNewChat,
             ),
-            Divider(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            Divider(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
+            ListTile(
+              leading: Icon(Icons.book, color: Colors.green[400]),
+              title: Text(
+                'Diario de Crisis',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              ),
+              onTap: () {
+                Navigator.pop(context); // Cerrar Drawer
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CrisisLogScreen()));
+              },
             ),
+            Divider(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
             Expanded(
               child: chatsForDrawer.isEmpty
                   ? Center(
                       child: Text(
                         'Inicia una conversación para archivarla.',
                         style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     )
@@ -1886,25 +2116,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         final isCurrentChat = chat.id == currentChatId;
 
                         return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 8.0,
-                            vertical: 4.0,
-                          ),
+                          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                           elevation: 1,
                           child: ListTile(
                             leading: isCurrentChat
-                                ? Icon(
-                                    Icons.mode_edit,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.secondary,
-                                  )
-                                : Icon(
-                                    Icons.chat_bubble_outline,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.7),
-                                  ),
+                                ? Icon(Icons.mode_edit, color: Theme.of(context).colorScheme.secondary)
+                                : Icon(Icons.chat_bubble_outline, color: Theme.of(context).colorScheme.primary.withOpacity(0.7)),
                             title: Text(
                               chat.title,
                               maxLines: 1,
@@ -1917,17 +2134,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             subtitle: Text(
                               '${chat.messages.length} mensajes',
                               style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                               ),
                             ),
                             onTap: () => _loadChat(chat.messages),
                             trailing: IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                                color: Colors.redAccent,
-                              ),
+                              icon: const Icon(Icons.delete, color: Colors.redAccent),
                               onPressed: () => _deleteChat(chat.id),
                             ),
                           ),
@@ -1935,42 +2147,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       },
                     ),
             ),
-            Divider(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-            ),
+            Divider(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
             ListTile(
-              leading: Icon(
-                Icons.bug_report,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              leading: Icon(Icons.bug_report, color: Theme.of(context).colorScheme.primary),
               title: Text(
-                'Reportar Fallo / Sugerencia',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                'Reportar Fallo',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
               onTap: () {
                 Navigator.of(context).pop();
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const ReportScreen()));
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen()));
               },
             ),
             ListTile(
               leading: const Icon(Icons.local_phone, color: Colors.redAccent),
               title: Text(
                 'Líneas de Emergencia',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
               onTap: () {
                 Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const EmergencyLinesScreen(),
-                  ),
-                );
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmergencyLinesScreen()));
               },
             ),
           ],
@@ -1980,8 +2177,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildChatContent() {
+    Widget content;
+    
     if (_messages.isEmpty) {
-      return Center(
+      content = Center(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(32.0),
@@ -2008,13 +2207,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Estoy aquí para escucharte y apoyarte en tu camino hacia una mente más feliz. Siempre iniciamos una nueva sesión al cargar.',
+                  'Estoy aquí para escucharte y apoyarte. Siempre iniciamos una nueva sesión al cargar.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.8),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
                 ),
                 const SizedBox(height: 30),
@@ -2042,17 +2239,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         color: Theme.of(context).colorScheme.onSecondary,
                         fontWeight: FontWeight.w500,
                       ),
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.secondary.withOpacity(0.8),
+                      backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.8),
                       elevation: 2,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     );
                   }).toList(),
                 ),
@@ -2061,9 +2251,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   'O simplemente escribe lo que tengas en mente abajo.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -2071,20 +2259,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
       );
-    }
-
-    return Container(
-      // Degradado de fondo para el área de chat
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: widget.isDarkMode
-              ? [const Color(0xFF1b1c1c), const Color(0xFF2C2E2E)]
-              : [const Color(0xFFECEFF1), const Color(0xFFF5F5F5)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: ListView.builder(
+    } else {
+      content = ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         itemCount: _messages.length,
@@ -2157,6 +2333,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           );
         },
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: widget.isDarkMode
+              ? [const Color(0xFF1b1c1c), const Color(0xFF2C2E2E)]
+              : [const Color(0xFFECEFF1), const Color(0xFFF5F5F5)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: BackgroundPatternPainter(isDarkMode: widget.isDarkMode),
+            ),
+          ),
+          content,
+        ],
       ),
     );
   }
@@ -2196,7 +2394,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 dotColor: Theme.of(context).colorScheme.secondary,
               ),
             ),
-          // Barra de entrada de texto
           Container(
             padding: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
@@ -2211,24 +2408,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             child: Row(
               children: [
-                // Botón de ARCHIVAR MANUALMENTE (Guardar)
                 if (!_isChatLocked && _messages.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: ElevatedButton(
                       onPressed: (!_isLoading)
                           ? () => showSaveChatModal(context, _messages, (chat) {
-                              _saveChat(chat);
-                            })
+                                _saveChat(chat);
+                              })
                           : null,
                       child: const Icon(Icons.archive),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.8),
-                        foregroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onPrimary,
+                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         minimumSize: const Size(50, 48),
                         padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
@@ -2240,7 +2432,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    // 🛑 BLOQUEA SI HAY CRISIS O SI ESTÁ CARGANDO
                     enabled: !_isChatLocked && !_isLoading,
                     decoration: InputDecoration(
                       hintText: _isChatLocked || _isLoading
@@ -2256,7 +2447,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  // 🛑 BLOQUEA SI HAY CRISIS O SI ESTÁ CARGANDO
                   onPressed: _isChatLocked || _isLoading
                       ? null
                       : () => sendMessage(_controller.text),
@@ -2290,4 +2480,61 @@ extension ListExtension<T> on List<T> {
     }
     return null;
   }
+}
+
+// 🖌️ CLASE: Patrón de fondo MULTICOLOR (Llamativo en ambos modos)
+class BackgroundPatternPainter extends CustomPainter {
+  final bool isDarkMode;
+  BackgroundPatternPainter({required this.isDarkMode});
+
+  // Paleta de colores para modo CLARO (Más saturados)
+  final List<Color> lightModeColors = [
+    Colors.purple.withOpacity(0.35),
+    Colors.blue.withOpacity(0.35),
+    Colors.redAccent.withOpacity(0.35),
+    Colors.orange.withOpacity(0.35),
+    Colors.green.withOpacity(0.35),
+    Colors.teal.withOpacity(0.35),
+  ];
+
+  // Paleta de colores para modo OSCURO (Más brillantes/neón)
+  final List<Color> darkModeColors = [
+    Colors.purpleAccent.withOpacity(0.3),
+    Colors.lightBlueAccent.withOpacity(0.3),
+    Colors.pinkAccent.withOpacity(0.3),
+    Colors.amberAccent.withOpacity(0.3),
+    Colors.lightGreenAccent.withOpacity(0.3),
+    Colors.cyanAccent.withOpacity(0.3),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..strokeWidth = 2.5 // Líneas más gruesas para ser más llamativas
+      ..style = PaintingStyle.stroke;
+
+    const double step = 50.0; 
+    final List<Color> currentPalette = isDarkMode ? darkModeColors : lightModeColors;
+
+    for (double y = 0; y < size.height; y += step) {
+      for (double x = 0; x < size.width; x += step) {
+        final double shiftX = (y / step).floor() % 2 == 0 ? 0 : step / 2;
+        final double drawX = x + shiftX;
+        final int colorIndex = ((x / step).floor() + (y / step).floor()) % currentPalette.length;
+        
+        paint.color = currentPalette[colorIndex];
+
+        if (((x + y) / step).floor() % 2 == 0) {
+          canvas.drawCircle(Offset(drawX, y), 5, paint); // Círculos un poco más grandes
+        } else {
+          final double r = 5;
+          canvas.drawLine(Offset(drawX - r, y - r), Offset(drawX + r, y + r), paint);
+          canvas.drawLine(Offset(drawX + r, y - r), Offset(drawX - r, y + r), paint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true; // Repintar si cambia el tema
 }

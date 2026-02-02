@@ -10,7 +10,7 @@ import 'dart:async';
 // ⚠️ CONFIGURACIÓN DE SUPABASE Y API
 // ---------------------------------------------------------------------
 const String supabaseUrl = 'https://shdwqjpzxfltyuczrqvi.supabase.co';
-const String supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoZHdxanB6eGZsdHl1Y3pycXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwOTc1NDQsImV4cCI6MjA4MTY3MzU0NH0.KOfPXFhvSKYNvkQE9zfHqaRdWVQTJEScE7E6-E3vwuQ';
+const String supabaseKey = '';
 
 const String chatEndpoint = 'https://psicoamigo-proxy.antonio-verstappen33.workers.dev';
 const String supportEmail = 'psicoamigosoporte@gmail.com';

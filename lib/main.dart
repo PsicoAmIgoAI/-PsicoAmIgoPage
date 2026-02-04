@@ -11,7 +11,6 @@ import 'dart:async';
 // ⚠️ CONFIGURACIÓN PÚBLICA
 // ---------------------------------------------------------------------
 // La URL de Supabase es pública por diseño (como la dirección de una casa).
-// No hay riesgo en dejarla aquí escrita.
 const String supabaseUrl = 'https://shdwqjpzxfltyuczrqvi.supabase.co';
 
 // El proxy maneja la comunicación con la IA para proteger la API Key de OpenRouter
@@ -26,7 +25,6 @@ Future<void> main() async {
 
   // 1. Buscamos la KEY (El único secreto real)
   // Primero intentamos leer la inyectada por Netlify (--dart-define)
-  // "const" aquí es mágico: se resuelve al momento de compilar en el servidor.
   const String envKey = String.fromEnvironment('SUPABASE_KEY');
   
   String finalKey = envKey;
@@ -480,7 +478,86 @@ class _PsicoAmIgoAppState extends State<PsicoAmIgoApp> {
 }
 
 // ---------------------------------------------------------------------
-// LOGIN SCREEN
+// 📜 PANTALLA DE TÉRMINOS Y CONDICIONES (NUEVA)
+// ---------------------------------------------------------------------
+class TermsAndConditionsScreen extends StatelessWidget {
+  const TermsAndConditionsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Términos y Condiciones")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Términos y Condiciones de Uso - PsicoAmIgo",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF3F448C)),
+            ),
+            const SizedBox(height: 20),
+            _buildSection("1. Naturaleza del Servicio (Apoyo, no Urgencias)", 
+              "PsicoAmIgo es una herramienta de apoyo emocional basada en Inteligencia Artificial.\n\n"
+              "• No es un sustituto de terapia profesional: La IA proporciona acompañamiento, pero no emite diagnósticos médicos vinculantes.\n"
+              "• Emergencias: El usuario reconoce que ante pensamientos de autolesión o peligro inminente, la aplicación mostrará un Protocolo de Crisis (bloqueo de chat y números de emergencia). Es responsabilidad del usuario contactar a las autoridades correspondientes (911, Línea de la Vida) en estos casos."
+            ),
+            _buildSection("2. Vinculación con Especialistas (Código de Doctor)",
+              "La aplicación permite la vinculación opcional con un psicólogo humano mediante un Código de Acceso.\n\n"
+              "• Sincronización de datos: Al ingresar un código válido, el usuario autoriza que sus Diarios de Crisis y estadísticas de uso sean visibles para el especialista vinculado.\n"
+              "• Desvinculación: El usuario puede revocar este acceso en cualquier momento desde el menú de configuración de la cuenta."
+            ),
+            _buildSection("3. Privacidad y Seguridad de los Datos",
+              "• Almacenamiento Híbrido: Los historiales de chat se guardan de forma local en el dispositivo del usuario. Al cerrar sesión o borrar el historial, estos datos pueden eliminarse permanentemente.\n"
+              "• Credenciales: El acceso está protegido mediante sistemas de autenticación cifrados en la nube. Es responsabilidad del usuario mantener la confidencialidad de sus credenciales de acceso.\n"
+              "• Uso de la IA: Las conversaciones se procesan a través de un servidor intermediario (proxy) seguro. Esto garantiza que la identidad del usuario y sus datos sensibles no sean expuestos directamente a los proveedores de los modelos de procesamiento de lenguaje."
+            ),
+            _buildSection("4. Limitaciones de Responsabilidad de la IA",
+              "• Exactitud: Aunque la IA está configurada bajo parámetros clínicos y reglas de comportamiento estrictas, puede generar respuestas inexactas o imprevistas.\n"
+              "• Restricciones de contenido: La IA tiene estrictamente prohibido realizar tareas ajenas a la salud mental. Intentar manipular el sistema o los prompts de seguridad para forzar comportamientos no autorizados puede resultar en la suspensión definitiva de la cuenta."
+            ),
+            _buildSection("5. Consentimiento de Uso",
+              "Al registrarse y presionar \"Aceptar\", el usuario otorga su consentimiento para:\n\n"
+              "• El procesamiento de sus datos de bienestar emocional con fines de apoyo terapéutico.\n"
+              "• Recibir correos electrónicos de seguridad o verificación para la gestión de la cuenta.\n"
+              "• El registro de su actividad mínima (última conexión y volumen de mensajes) para fines de seguimiento clínico por parte de su especialista (solo si existe una vinculación activa)."
+            ),
+            const SizedBox(height: 30),
+            Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3F448C), 
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(150, 45)
+                ),
+                child: const Text("Entendido"),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, String content) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(content, style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87)),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------
+// LOGIN SCREEN (CON SHOW PASSWORD & FORGOT PASSWORD)
 // ---------------------------------------------------------------------
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -496,11 +573,43 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _nameCtrl = TextEditingController();
   final _doctorCodeCtrl = TextEditingController();
   bool _isLoading = false;
+  
+  // 👁️ Variable para Mostrar/Ocultar contraseña
+  bool _obscurePassword = true;
+  
+  // ☑️ Variable para Términos y Condiciones
+  bool _termsAccepted = false; 
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+  }
+
+  // 🔑 Función para enviar correo de recuperación
+  Future<void> _handlePasswordReset() async {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("⚠️ Escribe tu correo primero para enviarte el enlace."), backgroundColor: Colors.orange));
+      return;
+    }
+    
+    setState(() => _isLoading = true);
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("📧 Revisa tu Correo"),
+          content: Text("Hemos enviado un enlace para restablecer la contraseña a:\n$email"),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Aceptar"))],
+        )
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+    }
+    setState(() => _isLoading = false);
   }
 
   void _handleAuth() async {
@@ -509,10 +618,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (_tabController.index == 0) {
       // --- LOGIN ---
       String? error = await AuthService.login(_emailCtrl.text.trim(), _passCtrl.text.trim());
-      
-      // ✅ CORRECCIÓN ASYNC GAP: Validar montaje
       if (!mounted) return;
-
       if (error == null) {
         widget.onLoginSuccess();
       } else {
@@ -520,6 +626,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       }
     } else {
       // --- REGISTRO ---
+      
+      // 🔒 VALIDACIÓN DE TÉRMINOS
+      if (!_termsAccepted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Debes aceptar los Términos y Condiciones.")));
+        setState(() => _isLoading = false);
+        return;
+      }
+
       String? error = await AuthService.register(
         _emailCtrl.text.trim(),
         _passCtrl.text.trim(),
@@ -527,7 +641,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         _doctorCodeCtrl.text.trim()
       );
 
-      // ✅ CORRECCIÓN ASYNC GAP
       if (!mounted) return;
 
       if (error == "CONFIRM_EMAIL") {
@@ -535,23 +648,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text("📧 Verifica tu Correo"),
-            content: const Text("Te hemos enviado un enlace de confirmación. Por favor revísalo para activar tu cuenta."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _tabController.animateTo(0); 
-                },
-                child: const Text("Entendido")
-              )
-            ],
+            content: const Text("Te hemos enviado un enlace de confirmación."),
+            actions: [TextButton(onPressed: () { Navigator.pop(ctx); _tabController.animateTo(0); }, child: const Text("Entendido"))],
           )
         );
       } else if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.red));
       }
     }
-
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -575,73 +679,118 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 20),
               SizedBox(
-                height: 380,
+                height: 480, // 📏 Ajuste de altura para los nuevos elementos
                 child: TabBarView(
                   controller: _tabController,
                   children: [
                     // LOGIN FORM
                     Column(
                       children: [
-                        TextField(
-                          controller: _emailCtrl,
-                          decoration: const InputDecoration(labelText: "Correo", prefixIcon: Icon(Icons.email)),
-                        ),
+                        TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: "Correo", prefixIcon: Icon(Icons.email))),
                         const SizedBox(height: 15),
+                        // 👁️ PASSWORD FIELD CON SHOW/HIDE
                         TextField(
-                          controller: _passCtrl,
-                          obscureText: true,
-                          decoration: const InputDecoration(labelText: "Contraseña", prefixIcon: Icon(Icons.lock)),
+                          controller: _passCtrl, 
+                          obscureText: _obscurePassword, 
+                          decoration: InputDecoration(
+                            labelText: "Contraseña", 
+                            prefixIcon: const Icon(Icons.lock),
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            )
+                          )
                         ),
-                        const SizedBox(height: 25),
-                        _isLoading
-                            ? const CircularProgressIndicator()
-                            : ElevatedButton(
-                                onPressed: _handleAuth,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF3F448C),
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size(double.infinity, 50),
-                                ),
-                                child: const Text("INICIAR SESIÓN"),
-                              ),
+                        
+                        // 🔑 BOTÓN OLVIDÉ CONTRASEÑA
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _handlePasswordReset,
+                            child: const Text("¿Olvidaste tu contraseña?", style: TextStyle(fontSize: 12, color: Color(0xFF3F448C))),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+                        _isLoading 
+                          ? const CircularProgressIndicator() 
+                          : ElevatedButton(
+                              onPressed: _handleAuth, 
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3F448C), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 50)), 
+                              child: const Text("INICIAR SESIÓN")
+                            ),
                       ],
                     ),
+                    
                     // REGISTER FORM
                     SingleChildScrollView(
                       child: Column(
                         children: [
+                          TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: "Nombre", prefixIcon: Icon(Icons.person))),
+                          const SizedBox(height: 10),
+                          TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: "Correo", prefixIcon: Icon(Icons.email))),
+                          const SizedBox(height: 10),
+                          // 👁️ PASSWORD FIELD CON SHOW/HIDE (TAMBIÉN EN REGISTRO)
                           TextField(
-                            controller: _nameCtrl,
-                            decoration: const InputDecoration(labelText: "Nombre", prefixIcon: Icon(Icons.person)),
+                            controller: _passCtrl, 
+                            obscureText: _obscurePassword, 
+                            decoration: InputDecoration(
+                              labelText: "Contraseña", 
+                              prefixIcon: const Icon(Icons.lock),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              )
+                            )
                           ),
                           const SizedBox(height: 10),
-                          TextField(
-                            controller: _emailCtrl,
-                            decoration: const InputDecoration(labelText: "Correo", prefixIcon: Icon(Icons.email)),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _passCtrl,
-                            obscureText: true,
-                            decoration: const InputDecoration(labelText: "Contraseña", prefixIcon: Icon(Icons.lock)),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _doctorCodeCtrl,
-                            decoration: const InputDecoration(labelText: "Cód. Doctor (Opcional)", prefixIcon: Icon(Icons.medical_services)),
-                          ),
-                          const SizedBox(height: 20),
-                          _isLoading
-                              ? const CircularProgressIndicator()
-                              : ElevatedButton(
-                                  onPressed: _handleAuth,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF3F448C),
-                                    foregroundColor: Colors.white,
-                                    minimumSize: const Size(double.infinity, 50),
+                          TextField(controller: _doctorCodeCtrl, decoration: const InputDecoration(labelText: "Cód. Doctor (Opcional)", prefixIcon: Icon(Icons.medical_services))),
+                          
+                          const SizedBox(height: 15),
+                          
+                          // ☑️ CHECKBOX DE TÉRMINOS
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _termsAccepted, 
+                                activeColor: const Color(0xFF3F448C),
+                                onChanged: (val) => setState(() => _termsAccepted = val ?? false)
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen())),
+                                  child: const Text.rich(
+                                    TextSpan(
+                                      text: "Acepto los ",
+                                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                                      children: [
+                                        TextSpan(
+                                          text: "Términos y Condiciones",
+                                          style: TextStyle(color: Color(0xFF3F448C), fontWeight: FontWeight.bold, decoration: TextDecoration.underline)
+                                        )
+                                      ]
+                                    )
                                   ),
-                                  child: const Text("REGISTRARME"),
                                 ),
+                              )
+                            ],
+                          ),
+
+                          const SizedBox(height: 15),
+                          
+                          _isLoading 
+                            ? const CircularProgressIndicator() 
+                            : ElevatedButton(
+                                // 🔒 BLOQUEO DEL BOTÓN SI NO ACEPTA TÉRMINOS
+                                onPressed: _termsAccepted ? _handleAuth : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3F448C), 
+                                  foregroundColor: Colors.white, 
+                                  minimumSize: const Size(double.infinity, 50),
+                                  disabledBackgroundColor: Colors.grey.shade300
+                                ),
+                                child: const Text("REGISTRARME")
+                              ),
                         ],
                       ),
                     )
